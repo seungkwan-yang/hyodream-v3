@@ -57,29 +57,12 @@ export const MenuCatalog: React.FC = () => {
       </div>
 
       {/* Categories Switch Tabs */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        gap: '8px',
-        borderBottom: '1px solid var(--border-color)',
-        paddingBottom: '12px',
-        overflowX: 'auto'
-      }}>
+      <div className="catalog-tabs-container">
         {categories.map(c => (
           <button
             key={c.id}
             onClick={() => setActiveTab(c.id)}
-            style={{
-              padding: '12px 24px',
-              borderRadius: '30px',
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: 700,
-              fontSize: '0.9rem',
-              transition: 'var(--transition-smooth)',
-              backgroundColor: activeTab === c.id ? 'var(--color-primary)' : 'transparent',
-              color: activeTab === c.id ? '#FFFFFF' : 'var(--color-text-sub)'
-            }}
+            className={`catalog-tab-btn ${activeTab === c.id ? 'active' : ''}`}
           >
             {c.label}
           </button>
