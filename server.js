@@ -65,7 +65,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/uploads', express.static(uploadsDir));
 
 // Neon PostgreSQL Connection Pool Setup
-const databaseUrl = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_b4ZyualKSh8R@ep-sparkling-art-aogor3ae-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
+const databaseUrl = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_Po6ikELGX3fA@ep-hidden-meadow-aoe4575u-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
 const { Pool } = pg;
 const pool = new Pool({
   connectionString: databaseUrl,
