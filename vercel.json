@@ -5,8 +5,24 @@
       "destination": "/api/index.js"
     },
     {
+      "source": "/uploads/:path*",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/assets/:path*",
+      "destination": "/dist/assets/:path*"
+    },
+    {
+      "source": "/favicon.svg",
+      "destination": "/dist/favicon.svg"
+    },
+    {
+      "source": "/icons.svg",
+      "destination": "/dist/icons.svg"
+    },
+    {
       "source": "/:path*",
-      "destination": "/index.html"
+      "destination": "/dist/index.html"
     }
   ]
 }
