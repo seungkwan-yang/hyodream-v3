@@ -1224,8 +1224,30 @@ export const PriceManager: React.FC = () => {
                     ) : (
                       /* Standard Render Row */
                       <>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                          {/* Option Image Thumbnail */}
+                          <div style={{
+                            width: '52px', height: '52px', flexShrink: 0,
+                            borderRadius: '8px', overflow: 'hidden',
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: opt.type === 'addition' ? 'rgba(82,110,84,0.06)' : 'rgba(200,122,83,0.06)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          }}>
+                            {opt.imageUrl ? (
+                              <img
+                                src={opt.imageUrl}
+                                alt={opt.name}
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                              />
+                            ) : (
+                              <span style={{ fontSize: '1.4rem' }}>
+                                {opt.type === 'addition' ? '➕' : '➖'}
+                              </span>
+                            )}
+                          </div>
+
+                          <div style={{ flex: 1 }}>
                             <strong style={{ fontSize: '0.85rem', color: 'var(--color-text-main)' }}>{opt.name.split(' (')[0]}</strong>
                             <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '2px', lineHeight: 1.3 }}>
                               {opt.description}
