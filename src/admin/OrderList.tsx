@@ -80,6 +80,35 @@ export const OrderList: React.FC = () => {
     }
   };
 
+  const getPaymentMethodBadgeStyle = (method: string | undefined) => {
+    const resolvedMethod = method || '토스페이';
+    if (resolvedMethod.includes('토스페이')) {
+      return {
+        color: '#0050FF',
+        backgroundColor: '#F2F6FF',
+        borderColor: 'rgba(0, 80, 255, 0.15)'
+      };
+    } else if (resolvedMethod.includes('카드')) {
+      return {
+        color: '#4F46E5',
+        backgroundColor: '#EEF2FF',
+        borderColor: 'rgba(79, 70, 229, 0.15)'
+      };
+    } else if (resolvedMethod.includes('계좌이체') || resolvedMethod.includes('무통장') || resolvedMethod.includes('가상계좌') || resolvedMethod.includes('은행')) {
+      return {
+        color: '#0D9488',
+        backgroundColor: '#F0FDFA',
+        borderColor: 'rgba(13, 148, 136, 0.15)'
+      };
+    } else {
+      return {
+        color: 'var(--color-primary)',
+        backgroundColor: 'var(--color-primary-fade)',
+        borderColor: 'rgba(82, 110, 84, 0.15)'
+      };
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} className="animate-fade-in-up">
       {/* Filtering Control Bar */}
@@ -175,12 +204,12 @@ export const OrderList: React.FC = () => {
                       <span style={{
                         fontSize: '0.75rem',
                         fontWeight: 700,
-                        color: item.paymentMethod?.includes('토스페이') ? '#0050FF' : 'var(--color-primary)',
-                        backgroundColor: item.paymentMethod?.includes('토스페이') ? '#F2F6FF' : 'var(--color-primary-fade)',
                         padding: '4px 10px',
                         borderRadius: '6px',
-                        border: item.paymentMethod?.includes('토스페이') ? '1px solid rgba(0, 80, 255, 0.15)' : '1px solid rgba(58, 80, 59, 0.15)',
-                        display: 'inline-block'
+                        display: 'inline-block',
+                        color: getPaymentMethodBadgeStyle(item.paymentMethod).color,
+                        backgroundColor: getPaymentMethodBadgeStyle(item.paymentMethod).backgroundColor,
+                        border: `1px solid ${getPaymentMethodBadgeStyle(item.paymentMethod).borderColor}`
                       }}>
                         {item.paymentMethod || '토스페이'}
                       </span>
@@ -340,7 +369,7 @@ export const OrderList: React.FC = () => {
                   <div style={{ display: 'flex' }}><span style={{ color: 'var(--color-text-muted)', width: '80px', flexShrink: 0 }}>제사 일정</span> <span style={{ fontWeight: 600 }}>{selectedInquiry.date}</span></div>
                   <div style={{ display: 'flex' }}><span style={{ color: 'var(--color-text-muted)', width: '80px', flexShrink: 0 }}>배송 희망</span> <span style={{ fontSize: '0.85rem' }}>{selectedInquiry.timeSlot}</span></div>
                   <div style={{ display: 'flex' }}><span style={{ color: 'var(--color-text-muted)', width: '80px', flexShrink: 0 }}><MapPin size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'text-bottom' }} />배송지</span> <span style={{ fontSize: '0.85rem' }}>{selectedInquiry.address} {selectedInquiry.addressDetail}</span></div>
-                  <div style={{ display: 'flex', borderTop: '1px dashed rgba(0,0,0,0.05)', paddingTop: '8px', marginTop: '4px' }}><span style={{ color: 'var(--color-text-muted)', width: '80px', flexShrink: 0 }}>결제 수단</span> <strong style={{ color: 'var(--color-primary)' }}>{selectedInquiry.paymentMethod || '토스페이'}</strong></div>
+                  <div style={{ display: 'flex', borderTop: '1px dashed rgba(0,0,0,0.05)', paddingTop: '8px', marginTop: '4px' }}><span style={{ color: 'var(--color-text-muted)', width: '80px', flexShrink: 0 }}>결제 수단</span> <strong style={{ color: getPaymentMethodBadgeStyle(selectedInquiry.paymentMethod).color }}>{selectedInquiry.paymentMethod || '토스페이'}</strong></div>
                   {selectedInquiry.tossTransactionId && (
                     <div style={{ display: 'flex' }}><span style={{ color: 'var(--color-text-muted)', width: '80px', flexShrink: 0 }}>토스 승인 ID</span> <span style={{ fontFamily: 'monospace', color: '#0050FF', fontWeight: 600 }}>{selectedInquiry.tossTransactionId}</span></div>
                   )}
