@@ -31,11 +31,17 @@ const pool = new Pool({
   }
 });
 
+// Prevent application crash on unhandled database errors
+pool.on('error', (err) => {
+  console.error('[HyoDream DB Pool] Unexpected database connection error:', err);
+});
+
 // Database Auto-Seeding (Self-Healing Migration)
 async function seedDatabase() {
-  const client = await pool.connect();
+  let client;
   try {
     console.log('[HyoDream DB Engine] Checking database seeding status...');
+    client = await pool.connect();
     
     // 1. Seed categories
     const catCheck = await client.query('SELECT COUNT(*) FROM hd_categories');
@@ -109,9 +115,9 @@ async function seedDatabase() {
 
     console.log('[HyoDream DB Engine] Database integrity verified.');
   } catch (err) {
-    console.error('[HyoDream DB Engine] Seeding error:', err);
+    console.error('[HyoDream DB Engine] Seeding error (Express server remains alive and active):', err);
   } finally {
-    client.release();
+    if (client) client.release();
   }
 }
 
