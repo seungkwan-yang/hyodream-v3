@@ -376,13 +376,23 @@ app.use((req, res, next) => {
 });
 
 // For any client route fallback, serve index.html (React routing support)
-app.get('*', (req, res) => {
+app.get(/.*/, (req, res) => {
   res.sendFile(path.join(publicDir, 'index.html'));
 });
 
-// Start listening and seed database
-app.listen(port, async () => {
-  console.log(`[HyoDream Express Server] Live on port ${port}`);
-  console.log(`Serving static folder: ${publicDir}`);
-  await seedDatabase();
-});
+// Export the app instance for Vercel serverless environment
+export default app;
+
+// Start listening and seed database, explicitly binding to 0.0.0.0 if not running inside Vercel
+if (!process.env.VERCEL) {
+  app.listen(port, '0.0.0.0', async () => {
+    console.log(`[HyoDream Express Server] Live on port ${port} (0.0.0.0)`);
+    console.log(`Serving static folder: ${publicDir}`);
+    await seedDatabase();
+  });
+} else {
+  // In Vercel environment, ensure database seeding runs on cold starts
+  seedDatabase().catch(err => {
+    console.error('[HyoDream DB Engine] Vercel Cold Start Seeding error:', err);
+  });
+}

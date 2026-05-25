@@ -1,5 +1,5 @@
 # --- BUILD STAGE ---
-FROM node:20-alpine AS build
+FROM node:20-slim AS build
 WORKDIR /app
 
 # Copy package requirements and lock files
@@ -11,12 +11,12 @@ COPY . .
 RUN npm run build
 
 # --- PRODUCTION STAGE ---
-FROM node:20-alpine AS production
+FROM node:20-slim AS production
 WORKDIR /app
 
 # Install production dependencies only (keep container super light)
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # Copy compiled assets from build stage and backend server file
 COPY --from=build /app/dist ./dist
