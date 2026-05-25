@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import type { BaseMenu, CustomOption } from '../context/AppContext';
 import { Check, HelpCircle, ArrowRight, ShoppingBag } from 'lucide-react';
+import { DishImage } from './DishImage';
 
 interface EstimatorProps {
   onProceedToForm: (data: {
@@ -271,23 +272,57 @@ export const Estimator: React.FC<EstimatorProps> = ({ onProceedToForm }) => {
                   </strong>
                   
                   {includedDishes.length > 0 ? (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                      gap: '12px'
+                    }}>
                       {includedDishes.map((dish) => (
-                        <span
+                        <div
                           key={dish.id}
                           style={{
-                            padding: '4px 10px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '10px',
                             backgroundColor: '#FFFFFF',
                             border: '1.5px solid var(--border-color)',
-                            borderRadius: '20px',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            color: 'var(--color-text-sub)',
-                            boxShadow: 'var(--shadow-sm)'
+                            borderRadius: '12px',
+                            boxShadow: 'var(--shadow-sm)',
+                            transition: 'var(--transition-smooth)'
                           }}
                         >
-                          {dish.name}
-                        </span>
+                          <div style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: '8px',
+                            overflow: 'hidden',
+                            border: '1px solid var(--border-color)',
+                            flexShrink: 0,
+                            backgroundColor: '#FAF8F5'
+                          }}>
+                            <DishImage imageUrl={dish.imageUrl} category={dish.category} name={dish.name} />
+                          </div>
+                          <div style={{ overflow: 'hidden', flex: 1 }}>
+                            <strong style={{
+                              display: 'block',
+                              fontSize: '0.8rem',
+                              color: 'var(--color-text-main)',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}>{dish.name}</strong>
+                            <span style={{
+                              fontSize: '0.7rem',
+                              color: 'var(--color-text-muted)',
+                              display: 'block',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              marginTop: '2px'
+                            }}>{dish.ingredients.split(',')[0]}</span>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   ) : (
@@ -358,8 +393,27 @@ export const Estimator: React.FC<EstimatorProps> = ({ onProceedToForm }) => {
                   {checkedOptionIds[opt.id] && <Check size={14} />}
                 </div>
 
+                {/* Option Image Thumbnail */}
+                {opt.imageUrl && (
+                  <div style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    border: '1px solid var(--border-color)',
+                    flexShrink: 0,
+                    backgroundColor: '#FAF8F5'
+                  }}>
+                    <img
+                      src={opt.imageUrl}
+                      alt={opt.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  </div>
+                )}
+
                 <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '6px' }}>
                     <strong style={{ fontSize: '0.9rem', color: 'var(--color-text-main)' }}>{opt.name}</strong>
                     <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--color-primary)' }}>
                       +{opt.price.toLocaleString()}원

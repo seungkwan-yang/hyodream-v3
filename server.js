@@ -85,14 +85,14 @@ async function seedDatabase() {
     if (parseInt(optCheck.rows[0].count) === 0) {
       console.log('[HyoDream DB Engine] Seeding default custom options...');
       await client.query(`
-        INSERT INTO hd_custom_options (id, name, price, type, description) VALUES
-        ('abalone', '완도산 명품 활전복 숙회 (5미)', 35000, 'addition', '주문 당일 활어 상태의 전복을 스팀하여 부드럽고 쫄깃한 식감의 고급 적(炙) 품목'),
-        ('beef', '한우 갈비찜 업그레이드', 40000, 'addition', '수입산 육적을 최고급 횡성 한우 양념 갈비찜으로 업그레이드하여 차림의 품격을 높임'),
-        ('ricecake', '수제 삼색경단 및 약식 추가', 15000, 'addition', '천연재료로 빚은 고소한 삼색경단과 밤, 대추가 듬뿍 들어간 수제 궁중 약식 추가 구성'),
-        ('sikhye', '수제 전통 식혜 (1.8L)', 10000, 'addition', '전통 방식 그대로 가마솥에 엿기름을 삭혀 깊은 단맛을 낸 홈메이드 전통 음료'),
-        ('utensils', '고급 제구 & 제문 세트 대여', 0, 'addition', '품격 있는 목제 제기 및 제문, 향로, 초 등을 무료로 대여해 드립니다.'),
-        ('noincense', '향/초/제문 세트 제외', -5000, 'subtraction', '가정에 이미 제구 및 향/초가 구비되어 있어 필요 없는 경우 적용하는 차감 옵션'),
-        ('simplefruit', '과일류 간소화', -20000, 'subtraction', '제사상에 필수적인 3색 과일(대추, 밤, 감/배)만 유지하고 기타 제철 과일을 제외하는 간소화 옵션')
+        INSERT INTO hd_custom_options (id, name, price, type, description, image_url) VALUES
+        ('abalone', '완도산 명품 활전복 숙회 (5미)', 35000, 'addition', '주문 당일 활어 상태의 전복을 스팀하여 부드럽고 쫄깃한 식감의 고급 적(炙) 품목', 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=600&q=80'),
+        ('beef', '한우 갈비찜 업그레이드', 40000, 'addition', '수입산 육적을 최고급 횡성 한우 양념 갈비찜으로 업그레이드하여 차림의 품격을 높임', 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80'),
+        ('ricecake', '수제 삼색경단 및 약식 추가', 15000, 'addition', '천연재료로 빚은 고소한 삼색경단과 밤, 대추가 듬뿍 들어간 수제 궁중 약식 추가 구성', 'https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=600&q=80'),
+        ('sikhye', '수제 전통 식혜 (1.8L)', 10000, 'addition', '전통 방식 그대로 가마솥에 엿기름을 삭혀 깊은 단맛을 낸 홈메이드 전통 음료', 'https://images.unsplash.com/photo-1607532941433-304659e8198a?auto=format&fit=crop&w=600&q=80'),
+        ('utensils', '고급 제구 & 제문 세트 대여', 0, 'addition', '품격 있는 목제 제기 및 제문, 향로, 초 등을 무료로 대여해 드립니다.', 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=600&q=80'),
+        ('noincense', '향/초/제문 세트 제외', -5000, 'subtraction', '가정에 이미 제구 및 향/초가 구비되어 있어 필요 없는 경우 적용하는 차감 옵션', NULL),
+        ('simplefruit', '과일류 간소화', -20000, 'subtraction', '제사상에 필수적인 3색 과일(대추, 밤, 감/배)만 유지하고 기타 제철 과일을 제외하는 간소화 옵션', NULL)
       `);
     }
 
@@ -262,7 +262,7 @@ app.delete('/api/catalog-items/:id', async (req, res) => {
 // 4. Custom Options CRUD
 app.get('/api/custom-options', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM hd_custom_options ORDER BY id ASC');
+    const result = await pool.query('SELECT id, name, price, type, description, image_url as "imageUrl" FROM hd_custom_options ORDER BY id ASC');
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -270,11 +270,11 @@ app.get('/api/custom-options', async (req, res) => {
 });
 
 app.post('/api/custom-options', async (req, res) => {
-  const { id, name, price, type, description } = req.body;
+  const { id, name, price, type, description, imageUrl } = req.body;
   try {
     const result = await pool.query(
-      'INSERT INTO hd_custom_options (id, name, price, type, description) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [id, name, price, type, description]
+      'INSERT INTO hd_custom_options (id, name, price, type, description, image_url) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, price, type, description, image_url as "imageUrl"',
+      [id, name, price, type, description, imageUrl]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -284,11 +284,11 @@ app.post('/api/custom-options', async (req, res) => {
 
 app.put('/api/custom-options/:id', async (req, res) => {
   const { id } = req.params;
-  const { name, price, type, description } = req.body;
+  const { name, price, type, description, imageUrl } = req.body;
   try {
     const result = await pool.query(
-      'UPDATE hd_custom_options SET name = $1, price = $2, type = $3, description = $4 WHERE id = $5 RETURNING *',
-      [name, price, type, description, id]
+      'UPDATE hd_custom_options SET name = $1, price = $2, type = $3, description = $4, image_url = $5 WHERE id = $6 RETURNING id, name, price, type, description, image_url as "imageUrl"',
+      [name, price, type, description, imageUrl, id]
     );
     res.json(result.rows[0]);
   } catch (err) {

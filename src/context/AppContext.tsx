@@ -43,6 +43,7 @@ export interface CustomOption {
   price: number;
   type: 'addition' | 'subtraction';
   description: string;
+  imageUrl?: string;
 }
 
 export interface Inquiry {
