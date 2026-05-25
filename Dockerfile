@@ -11,11 +11,19 @@ COPY . .
 RUN npm run build
 
 # --- PRODUCTION STAGE ---
-FROM nginx:stable-alpine
-# Copy compiled static assets from build stage to Nginx directory
-COPY --from=build /app/dist /usr/share/nginx/html
-# Copy custom Nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+FROM node:20-alpine AS production
+WORKDIR /app
+
+# Install production dependencies only (keep container super light)
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Copy compiled assets from build stage and backend server file
+COPY --from=build /app/dist ./dist
+COPY server.js ./
 
 EXPOSE 8080
-CMD ["nginx", "-g", "daemon off;"]
+ENV NODE_ENV=production
+
+# Run our express backend server directly on Cloud Run
+CMD ["node", "server.js"]
