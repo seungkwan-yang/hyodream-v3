@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
 import type { Inquiry, InquiryStatus } from '../context/AppContext';
 import { Search, Calendar, MapPin, Phone, Eye, Trash2, Clipboard, X, CheckCircle, Clock, Truck, Award } from 'lucide-react';
@@ -237,13 +238,13 @@ export const OrderList: React.FC = () => {
       </div>
 
       {/* Traditional Receipt Modal (Detail Viewer) */}
-      {selectedInquiry && (
+      {selectedInquiry && createPortal(
         <div 
           onClick={() => setSelectedInquiry(null)}
           style={{
             position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
             backgroundColor: 'rgba(44, 38, 33, 0.4)', backdropFilter: 'blur(4px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
             padding: '20px'
           }}
         >
@@ -414,7 +415,8 @@ export const OrderList: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
