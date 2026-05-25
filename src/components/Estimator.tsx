@@ -13,15 +13,32 @@ interface EstimatorProps {
 }
 
 export const Estimator: React.FC<EstimatorProps> = ({ onProceedToForm }) => {
-  const { baseMenus, customOptions, catalogItems } = useApp();
+  const { menuCategories, baseMenus, customOptions, catalogItems } = useApp();
   
-  // Set default package as standard (kijung) or first available
-  const [selectedPkgId, setSelectedPkgId] = useState<string>('kijung');
+  const visibleCategories = menuCategories.filter(cat => cat.visible);
+  
+  // Set default active category to the first one available
+  const [activeCatId, setActiveCatId] = useState<string>(() => {
+    return visibleCategories[0]?.id || '';
+  });
+
+  const visibleBaseMenus = baseMenus.filter(m => m.visible && m.categoryId === activeCatId);
+
+  // Track the selected package ID
+  const [selectedPkgId, setSelectedPkgId] = useState<string>('');
   const [checkedOptionIds, setCheckedOptionIds] = useState<Record<string, boolean>>({});
   const [displayedPrice, setDisplayedPrice] = useState(0);
 
-  const visibleBaseMenus = baseMenus.filter(m => m.visible);
-  const selectedPackage = baseMenus.find(m => m.id === selectedPkgId && m.visible) || visibleBaseMenus[0] || baseMenus[0];
+  const selectedPackage = baseMenus.find(m => m.id === selectedPkgId && m.visible && m.categoryId === activeCatId) 
+    || visibleBaseMenus[0] 
+    || baseMenus[0];
+
+  // Keep selectedPkgId strictly synchronized with the resolved package
+  useEffect(() => {
+    if (selectedPackage && selectedPackage.id !== selectedPkgId) {
+      setSelectedPkgId(selectedPackage.id);
+    }
+  }, [selectedPackage, selectedPkgId]);
 
   // Get dynamic included dishes list
   const includedDishes = catalogItems.filter(
@@ -121,6 +138,51 @@ export const Estimator: React.FC<EstimatorProps> = ({ onProceedToForm }) => {
           <p style={{ fontSize: '0.85rem', color: 'var(--color-text-sub)', marginBottom: '24px' }}>
             모시는 인원과 기제사/행사의 규모에 맞게 알맞은 베이스 패키지를 선택해 주세요.
           </p>
+
+          {/* 1차 메뉴 카테고리 탭 (실시간 반영) */}
+          {visibleCategories.length > 0 && (
+            <div style={{
+              display: 'flex',
+              gap: '8px',
+              marginBottom: '20px',
+              borderBottom: '1px solid var(--border-color)',
+              paddingBottom: '12px',
+              overflowX: 'auto',
+              scrollbarWidth: 'none', // Firefox
+              msOverflowStyle: 'none' // IE/Edge
+            }} className="no-scrollbar">
+              {visibleCategories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => {
+                    setActiveCatId(cat.id);
+                    // 활성 카테고리 변경 시, 가격 및 명세서가 정상 동조되도록 첫 번째 상차림 패키지로 자동 매치
+                    const firstMenuInCat = baseMenus.find(m => m.visible && m.categoryId === cat.id);
+                    if (firstMenuInCat) {
+                      setSelectedPkgId(firstMenuInCat.id);
+                    } else {
+                      setSelectedPkgId('');
+                    }
+                  }}
+                  style={{
+                    padding: '8px 18px',
+                    borderRadius: '20px',
+                    border: activeCatId === cat.id ? 'none' : '1px solid var(--border-color)',
+                    backgroundColor: activeCatId === cat.id ? 'var(--color-primary)' : '#FFFFFF',
+                    color: activeCatId === cat.id ? '#FFFFFF' : 'var(--color-text-sub)',
+                    fontWeight: activeCatId === cat.id ? 700 : 500,
+                    cursor: 'pointer',
+                    fontSize: '0.85rem',
+                    whiteSpace: 'nowrap',
+                    transition: 'var(--transition-smooth)',
+                    boxShadow: activeCatId === cat.id ? 'var(--shadow-sm)' : 'none'
+                  }}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Table Tab Cards */}
           {visibleBaseMenus.length > 0 ? (

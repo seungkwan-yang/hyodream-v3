@@ -18,9 +18,17 @@ export interface CatalogItem {
   imageUrl: string; // Image path or category key
 }
 
+// Menu Category Grouping
+export interface MenuCategory {
+  id: string;
+  name: string;
+  visible: boolean;
+}
+
 // Base menu packages
 export interface BaseMenu {
   id: string;
+  categoryId: string; // Linked MenuCategory ID
   name: string;
   description: string;
   price: number;
@@ -65,6 +73,12 @@ interface AppContextType {
   setCustomerTab: (tab: CustomerTab) => void;
   adminTab: AdminTab;
   setAdminTab: (tab: AdminTab) => void;
+  
+  // Menu Categories
+  menuCategories: MenuCategory[];
+  addMenuCategory: (category: Omit<MenuCategory, 'id' | 'visible'>) => MenuCategory;
+  updateMenuCategory: (id: string, updated: Partial<MenuCategory>) => void;
+  deleteMenuCategory: (id: string) => void;
   
   // Base Packages
   baseMenus: BaseMenu[];
@@ -201,10 +215,17 @@ const defaultCatalogItems: CatalogItem[] = [
   }
 ];
 
+// Initial Mock Menu Categories
+const defaultMenuCategories: MenuCategory[] = [
+  { id: 'cat-ritual', name: '차례 / 기제사상', visible: true },
+  { id: 'cat-gosa', name: '고사 / 시제상', visible: true }
+];
+
 // Initial Mock Base Packages (itemIds map inside them)
 const defaultBaseMenus: BaseMenu[] = [
   {
     id: 'kisso',
+    categoryId: 'cat-ritual',
     name: '소가족 실속상 (기제사 소)',
     description: '1~2인 가구 및 핵가족을 위한 실속형 상차림. 필수 제수로 알차게 구성하여 예에 정성을 다했습니다.',
     price: 220000,
@@ -214,6 +235,7 @@ const defaultBaseMenus: BaseMenu[] = [
   },
   {
     id: 'kijung',
+    categoryId: 'cat-ritual',
     name: '표준 맞춤상 (기제사 중)',
     description: '가장 많이 찾으시는 대중적인 3~4인용 표준 상차림. 넉넉하고 정갈한 음식으로 제를 모실 수 있습니다.',
     price: 350000,
@@ -223,6 +245,7 @@ const defaultBaseMenus: BaseMenu[] = [
   },
   {
     id: 'kidae',
+    categoryId: 'cat-ritual',
     name: '명가 전통상 (기제사 대)',
     description: '대가족 및 5인 이상 가족을 위한 품격 높은 풍성한 상차림. 엄선된 식재료와 장인의 손길로 준비됩니다.',
     price: 480000,
@@ -232,6 +255,7 @@ const defaultBaseMenus: BaseMenu[] = [
   },
   {
     id: 'gosa',
+    categoryId: 'cat-gosa',
     name: '개업 고사상 / 시제상',
     description: '사업 번창과 가문의 평안을 기원하는 맞춤형 제사상. 돼지머리(실물 또는 모형선택) 및 떡, 과일 구성.',
     price: 290000,
@@ -347,14 +371,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [customerTab, setCustomerTab] = useState<CustomerTab>('home');
   const [adminTab, setAdminTab] = useState<AdminTab>('dashboard');
 
+  const [menuCategories, setMenuCategories] = useState<MenuCategory[]>(() => {
+    const saved = localStorage.getItem('hd_menuCategories');
+    return saved ? JSON.parse(saved) : defaultMenuCategories;
+  });
+
   const [baseMenus, setBaseMenus] = useState<BaseMenu[]>(() => {
     const saved = localStorage.getItem('hd_baseMenus');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Guarantee all fields (itemIds, visible) are populated even on older structures
+        // Guarantee all fields (itemIds, visible, categoryId) are populated even on older structures
         return parsed.map((m: any) => ({
           ...m,
+          categoryId: m.categoryId || (m.id === 'gosa' ? 'cat-gosa' : 'cat-ritual'), // Self-healing migration
           itemIds: m.itemIds || [],
           visible: m.visible !== undefined ? m.visible : true
         }));
@@ -395,6 +425,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem('hd_viewMode', viewMode);
   }, [viewMode]);
+
+  useEffect(() => {
+    localStorage.setItem('hd_menuCategories', JSON.stringify(menuCategories));
+  }, [menuCategories]);
 
   useEffect(() => {
     localStorage.setItem('hd_baseMenus', JSON.stringify(baseMenus));
@@ -455,6 +489,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Delete base menu package
   const deleteBaseMenu = (id: string) => {
     setBaseMenus(prev => prev.filter(item => item.id !== id));
+  };
+
+  // Add Menu Category
+  const addMenuCategory = (catData: Omit<MenuCategory, 'id' | 'visible'>) => {
+    const newId = `cat-${Date.now()}`;
+    const newCategory: MenuCategory = {
+      ...catData,
+      id: newId,
+      visible: true
+    };
+    setMenuCategories(prev => [...prev, newCategory]);
+    return newCategory;
+  };
+
+  // Update Menu Category
+  const updateMenuCategory = (id: string, updated: Partial<MenuCategory>) => {
+    setMenuCategories(prev =>
+      prev.map(cat => (cat.id === id ? { ...cat, ...updated } : cat))
+    );
+  };
+
+  // Delete Menu Category
+  const deleteMenuCategory = (id: string) => {
+    setMenuCategories(prev => prev.filter(cat => cat.id !== id));
+    // Cascade delete base menus in this category
+    setBaseMenus(prev => prev.filter(m => m.categoryId !== id));
   };
 
   // Catalog Item CMS Actions
@@ -564,6 +624,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCustomerTab,
         adminTab,
         setAdminTab,
+        menuCategories,
+        addMenuCategory,
+        updateMenuCategory,
+        deleteMenuCategory,
         baseMenus,
         updateBaseMenuPrice,
         updateBaseMenuItems,

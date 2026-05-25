@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import type { CatalogItem, BaseMenu } from '../context/AppContext';
-import { DollarSign, Tag, Info, CheckCircle2, Eye, EyeOff, Trash2, Edit2, Plus, Sparkles, Check } from 'lucide-react';
+import type { CatalogItem, BaseMenu, MenuCategory } from '../context/AppContext';
+import { DollarSign, Tag, Info, CheckCircle2, Eye, EyeOff, Trash2, Edit2, Plus, Sparkles, Check, Settings } from 'lucide-react';
 import { DishImage } from '../components/DishImage';
 
 export const PriceManager: React.FC = () => {
   const {
+    menuCategories,
+    addMenuCategory,
+    updateMenuCategory,
+    deleteMenuCategory,
     baseMenus,
     updateBaseMenuPrice,
     updateBaseMenuItems,
@@ -30,6 +34,12 @@ export const PriceManager: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [activeEditingId, setActiveEditingId] = useState<string | null>(null);
 
+  // Menu Category CMS States
+  const [showAddCategoryForm, setShowAddCategoryForm] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editCategoryName, setEditCategoryName] = useState('');
+
   // Package Item Configurator State
   const [activePkgConfigId, setActivePkgConfigId] = useState<string | null>(null);
 
@@ -39,6 +49,7 @@ export const PriceManager: React.FC = () => {
   const [newBasePrice, setNewBasePrice] = useState('');
   const [newBaseDesc, setNewBaseDesc] = useState('');
   const [newBaseTags, setNewBaseTags] = useState('');
+  const [newBaseCategoryId, setNewBaseCategoryId] = useState('');
 
   // Editing Base Menu States
   const [editingBaseId, setEditingBaseId] = useState<string | null>(null);
@@ -46,6 +57,7 @@ export const PriceManager: React.FC = () => {
   const [editBasePrice, setEditBasePrice] = useState('');
   const [editBaseDesc, setEditBaseDesc] = useState('');
   const [editBaseTags, setEditBaseTags] = useState('');
+  const [editBaseCategoryId, setEditBaseCategoryId] = useState('');
 
   // New Dish CMS Form States
   const [newDishName, setNewDishName] = useState('');
@@ -77,6 +89,34 @@ export const PriceManager: React.FC = () => {
   const [editOptPrice, setEditOptPrice] = useState('');
   const [editOptDesc, setEditOptDesc] = useState('');
 
+  // Category CRUD Handlers
+  const handleAddCategorySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCategoryName.trim()) {
+      alert('카테고리 이름을 입력해 주세요.');
+      return;
+    }
+    addMenuCategory({ name: newCategoryName });
+    setNewCategoryName('');
+    setShowAddCategoryForm(false);
+    triggerFeedback('새로운 상차림 카테고리가 성공적으로 추가되었습니다.');
+  };
+
+  const startEditCategory = (cat: MenuCategory) => {
+    setEditingCategoryId(cat.id);
+    setEditCategoryName(cat.name);
+  };
+
+  const handleSaveEditCategory = () => {
+    if (!editCategoryName.trim()) {
+      alert('카테고리 이름을 입력해 주세요.');
+      return;
+    }
+    updateMenuCategory(editingCategoryId!, { name: editCategoryName });
+    setEditingCategoryId(null);
+    triggerFeedback('카테고리 명칭이 성공적으로 수정되었습니다.');
+  };
+
   // Base Menu CMS Handlers
   const handleAddBaseMenuSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,8 +130,11 @@ export const PriceManager: React.FC = () => {
       .map(t => t.trim())
       .filter(t => t.length > 0);
 
+    const resolvedCategoryId = newBaseCategoryId || menuCategories[0]?.id || '';
+
     addBaseMenu({
       name: newBaseName,
+      categoryId: resolvedCategoryId,
       price: priceNum,
       description: newBaseDesc || '상세 상차림 특징 설명이 없습니다.',
       tags: tagsArray.length > 0 ? tagsArray : ['맞춤 차림'],
@@ -102,6 +145,7 @@ export const PriceManager: React.FC = () => {
     setNewBasePrice('');
     setNewBaseDesc('');
     setNewBaseTags('');
+    setNewBaseCategoryId('');
     setShowAddBaseMenuForm(false);
     triggerFeedback('새로운 상차림 패키지가 정상적으로 추가되었습니다.');
   };
@@ -112,6 +156,7 @@ export const PriceManager: React.FC = () => {
     setEditBasePrice(String(menu.price));
     setEditBaseDesc(menu.description);
     setEditBaseTags(menu.tags.join(', '));
+    setEditBaseCategoryId(menu.categoryId);
   };
 
   const handleSaveEditBaseMenu = () => {
@@ -129,7 +174,8 @@ export const PriceManager: React.FC = () => {
       name: editBaseName,
       price: priceNum,
       description: editBaseDesc,
-      tags: tagsArray
+      tags: tagsArray,
+      categoryId: editBaseCategoryId
     });
 
     setEditingBaseId(null);
@@ -331,8 +377,172 @@ export const PriceManager: React.FC = () => {
       {internalTab === 'pricing' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '24px' }} className="responsive-chart-grid">
           
-          {/* Base Packages with Dish selection checkboxes */}
+          {/* Left Column: Categories and Base Packages */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            
+            {/* 1차 상차림 카테고리 제어센터 */}
+            <div className="premium-card" style={{ padding: '28px', backgroundColor: '#FFFFFF' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Settings size={18} style={{ color: 'var(--color-primary)' }} />
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 600 }}>상차림 카테고리 관리 (1차 메뉴)</h3>
+                </div>
+                
+                <button
+                  onClick={() => setShowAddCategoryForm(!showAddCategoryForm)}
+                  className="btn-text"
+                  style={{
+                    fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-primary)',
+                    backgroundColor: 'var(--color-primary-fade)', padding: '6px 12px', borderRadius: '8px',
+                    border: 'none', cursor: 'pointer'
+                  }}
+                >
+                  {showAddCategoryForm ? '✓ 닫기' : '+ 새 카테고리 추가'}
+                </button>
+              </div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '20px' }}>
+                고객 페이지의 실시간 주문기에 반영될 대분류(1차 메뉴) 카테고리를 실시간으로 관리합니다.
+              </p>
+
+              {/* Add Category Form */}
+              {showAddCategoryForm && (
+                <div className="animate-fade-in-up" style={{
+                  padding: '16px',
+                  backgroundColor: 'var(--bg-secondary)',
+                  border: '1.5px solid var(--border-color)',
+                  borderRadius: '12px',
+                  marginBottom: '20px'
+                }}>
+                  <form onSubmit={handleAddCategorySubmit} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, display: 'block', marginBottom: '6px' }}>새 카테고리 이름 *</label>
+                      <input
+                        type="text"
+                        placeholder="예: 묘사 / 시제상"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        style={{ fontSize: '0.85rem', padding: '8px 12px', width: '100%' }}
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="btn-primary"
+                      style={{ padding: '9px 16px', fontSize: '0.85rem', borderRadius: '8px', height: '38px' }}
+                    >
+                      추가
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              {/* Category Rows */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {menuCategories.map((cat) => (
+                  <div
+                    key={cat.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px 16px',
+                      borderRadius: '12px',
+                      backgroundColor: 'var(--bg-secondary)',
+                      border: editingCategoryId === cat.id ? '1.5px solid var(--color-primary)' : '1px solid var(--border-color)',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {editingCategoryId === cat.id ? (
+                      <div style={{ display: 'flex', gap: '10px', width: '100%', alignItems: 'center' }}>
+                        <input
+                          type="text"
+                          value={editCategoryName}
+                          onChange={(e) => setEditCategoryName(e.target.value)}
+                          style={{ flex: 1, fontSize: '0.85rem', padding: '6px 10px' }}
+                        />
+                        <button
+                          onClick={() => setEditingCategoryId(null)}
+                          className="btn-secondary"
+                          style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '6px' }}
+                        >
+                          취소
+                        </button>
+                        <button
+                          onClick={handleSaveEditCategory}
+                          className="btn-primary"
+                          style={{ padding: '5px 12px', fontSize: '0.75rem', borderRadius: '6px', boxShadow: 'none' }}
+                        >
+                          저장
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{
+                            width: '8px', height: '8px', borderRadius: '50%',
+                            backgroundColor: cat.visible ? 'var(--color-primary)' : 'var(--color-text-muted)'
+                          }} />
+                          <strong style={{ fontSize: '0.88rem', color: 'var(--color-text-main)' }}>{cat.name}</strong>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>
+                            (상차림: {baseMenus.filter(m => m.categoryId === cat.id).length}개)
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {/* Visibility Toggle */}
+                          <button
+                            onClick={() => {
+                              updateMenuCategory(cat.id, { visible: !cat.visible });
+                              triggerFeedback(`카테고리 노출 상태가 변경되었습니다.`);
+                            }}
+                            title={cat.visible ? '고객 페이지에서 숨기기' : '고객 페이지에 노출하기'}
+                            style={{
+                              width: '28px', height: '28px', border: '1px solid var(--border-color)',
+                              borderRadius: '6px', cursor: 'pointer', backgroundColor: '#FFF',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              color: cat.visible ? 'var(--color-primary)' : 'var(--color-text-muted)'
+                            }}
+                          >
+                            {cat.visible ? <Eye size={13} /> : <EyeOff size={13} />}
+                          </button>
+                          {/* Edit */}
+                          <button
+                            onClick={() => startEditCategory(cat)}
+                            title="이름 수정"
+                            style={{
+                              width: '28px', height: '28px', border: '1px solid var(--border-color)',
+                              borderRadius: '6px', cursor: 'pointer', backgroundColor: '#FFF',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              color: 'var(--color-gold)'
+                            }}
+                          >
+                            <Edit2 size={12} />
+                          </button>
+                          {/* Delete */}
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`'${cat.name}' 카테고리를 영구 삭제하시겠습니까?\n이 카테고리에 속한 모든 세부 상차림 패키지들도 CASCADE 방식으로 동반 삭제됩니다.`)) {
+                                deleteMenuCategory(cat.id);
+                                triggerFeedback('카테고리와 연관 상차림들이 안전하게 삭제되었습니다.');
+                              }
+                            }}
+                            title="삭제"
+                            style={{
+                              width: '28px', height: '28px', border: '1px solid rgba(200, 122, 83, 0.2)',
+                              borderRadius: '6px', cursor: 'pointer', backgroundColor: '#FFF',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              color: 'var(--color-rose)'
+                            }}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Base Packages Card */}
             <div className="premium-card" style={{ padding: '28px', backgroundColor: '#FFFFFF' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -392,15 +602,30 @@ export const PriceManager: React.FC = () => {
                       </div>
                     </div>
 
-                    <div>
-                      <label style={{ fontSize: '0.75rem', fontWeight: 700, display: 'block', marginBottom: '4px' }}>태그 (쉼표로 구분)</label>
-                      <input
-                        type="text"
-                        placeholder="예: 실속형, 1~2인, 기제사"
-                        value={newBaseTags}
-                        onChange={(e) => setNewBaseTags(e.target.value)}
-                        style={{ fontSize: '0.85rem', padding: '8px 12px', width: '100%' }}
-                      />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 700, display: 'block', marginBottom: '4px' }}>태그 (쉼표로 구분)</label>
+                        <input
+                          type="text"
+                          placeholder="예: 실속형, 1~2인, 기제사"
+                          value={newBaseTags}
+                          onChange={(e) => setNewBaseTags(e.target.value)}
+                          style={{ fontSize: '0.85rem', padding: '8px 12px', width: '100%' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 700, display: 'block', marginBottom: '4px' }}>소속 카테고리 *</label>
+                        <select
+                          value={newBaseCategoryId}
+                          onChange={(e) => setNewBaseCategoryId(e.target.value)}
+                          style={{ fontSize: '0.85rem', padding: '8px 12px', width: '100%', height: '38px' }}
+                        >
+                          <option value="">-- 카테고리 선택 --</option>
+                          {menuCategories.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
 
                     <div>
@@ -464,15 +689,29 @@ export const PriceManager: React.FC = () => {
                           </div>
                         </div>
 
-                        <div>
-                          <label style={{ fontSize: '0.7rem', fontWeight: 700, display: 'block', marginBottom: '2px' }}>태그 (쉼표 구분)</label>
-                          <input
-                            type="text"
-                            value={editBaseTags}
-                            onChange={(e) => setEditBaseTags(e.target.value)}
-                            placeholder="태그"
-                            style={{ fontSize: '0.8rem', padding: '6px 10px', width: '100%' }}
-                          />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '12px' }}>
+                          <div>
+                            <label style={{ fontSize: '0.7rem', fontWeight: 700, display: 'block', marginBottom: '2px' }}>태그 (쉼표 구분)</label>
+                            <input
+                              type="text"
+                              value={editBaseTags}
+                              onChange={(e) => setEditBaseTags(e.target.value)}
+                              placeholder="태그"
+                              style={{ fontSize: '0.8rem', padding: '6px 10px', width: '100%' }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '0.7rem', fontWeight: 700, display: 'block', marginBottom: '2px' }}>소속 카테고리</label>
+                            <select
+                              value={editBaseCategoryId}
+                              onChange={(e) => setEditBaseCategoryId(e.target.value)}
+                              style={{ fontSize: '0.8rem', padding: '5px 10px', width: '100%', height: '32px' }}
+                            >
+                              {menuCategories.map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
 
                         <div>
@@ -508,7 +747,7 @@ export const PriceManager: React.FC = () => {
                         {/* Header info */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
                           <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                               <strong style={{
                                 fontSize: '0.95rem',
                                 color: menu.visible ? 'var(--color-text-main)' : 'var(--color-text-muted)',
@@ -516,11 +755,21 @@ export const PriceManager: React.FC = () => {
                               }}>
                                 {menu.name}
                               </strong>
+                              <span style={{
+                                padding: '2px 8px',
+                                fontSize: '0.7rem',
+                                backgroundColor: 'var(--color-primary-fade)',
+                                color: 'var(--color-primary-dark)',
+                                borderRadius: '12px',
+                                fontWeight: 700
+                              }}>
+                                {menuCategories.find(c => c.id === menu.categoryId)?.name || '분류 미지정'}
+                              </span>
                               {!menu.visible && (
                                 <span style={{ fontSize: '0.7rem', color: 'var(--color-rose)', fontWeight: 700 }}>[숨김 상태]</span>
                               )}
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '6px' }}>
                               {menu.tags.map((t, idx) => (
                                 <span key={idx} style={{ marginRight: '6px', fontWeight: 600, color: 'var(--color-primary)' }}>#{t}</span>
                               ))}
