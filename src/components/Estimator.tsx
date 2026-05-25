@@ -126,7 +126,7 @@ export const Estimator: React.FC<EstimatorProps> = ({ onProceedToForm }) => {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
         
         {/* Step 1: Base Table Selection */}
-        <div className="premium-card" style={{ padding: '32px', backgroundColor: '#FFFFFF' }}>
+        <div className="premium-card estimator-step-card" style={{ padding: '32px', backgroundColor: '#FFFFFF' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
             <span style={{
               width: '24px', height: '24px', borderRadius: '50%',
@@ -351,7 +351,7 @@ export const Estimator: React.FC<EstimatorProps> = ({ onProceedToForm }) => {
         </div>
 
         {/* Step 2: Custom Additions */}
-        <div className="premium-card" style={{ padding: '32px', backgroundColor: '#FFFFFF' }}>
+        <div className="premium-card estimator-step-card" style={{ padding: '32px', backgroundColor: '#FFFFFF' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
             <span style={{
               width: '24px', height: '24px', borderRadius: '50%',
@@ -429,7 +429,7 @@ export const Estimator: React.FC<EstimatorProps> = ({ onProceedToForm }) => {
         </div>
 
         {/* Step 3: Subtractions & Simple Options */}
-        <div className="premium-card" style={{ padding: '32px', backgroundColor: '#FFFFFF' }}>
+        <div className="premium-card estimator-step-card" style={{ padding: '32px', backgroundColor: '#FFFFFF' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
             <span style={{
               width: '24px', height: '24px', borderRadius: '50%',
@@ -490,11 +490,9 @@ export const Estimator: React.FC<EstimatorProps> = ({ onProceedToForm }) => {
       </div>
 
       {/* Right Column: Live Glassmorphism Invoice Receipt */}
-      <div className="glass-panel" style={{
+      <div className="glass-panel estimator-receipt" style={{
         padding: '32px',
         borderRadius: '24px',
-        position: 'sticky',
-        top: '112px',
         border: '2px solid var(--color-primary)',
         boxShadow: 'var(--shadow-lg)'
       }}>

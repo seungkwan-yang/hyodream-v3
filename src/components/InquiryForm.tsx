@@ -122,13 +122,7 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
   return (
     <div style={{ maxWidth: '750px', margin: '0 auto' }} className="animate-fade-in-up">
       {/* Stepper Status Indicators */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '40px',
-        padding: '0 20px'
-      }}>
+      <div className="stepper-wrapper">
         {[
           { num: 1, label: '상차림 확인' },
           { num: 2, label: '일정 및 배송지' },
@@ -143,7 +137,7 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
             flex: 1
           }}>
             {/* Step Number Circle */}
-            <div style={{
+            <div className="stepper-circle" style={{
               width: '36px', height: '36px', borderRadius: '50%',
               backgroundColor: step >= s.num ? 'var(--color-primary)' : 'var(--border-color)',
               color: step >= s.num ? '#FFFFFF' : 'var(--color-text-muted)',
@@ -154,7 +148,7 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
               {step > s.num ? <Check size={16} /> : s.num}
             </div>
             
-            <span style={{
+            <span className="stepper-label" style={{
               fontSize: '0.8rem',
               color: step >= s.num ? 'var(--color-text-main)' : 'var(--color-text-muted)',
               fontWeight: step === s.num ? 700 : 500,
@@ -179,7 +173,7 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
       </div>
 
       {/* Wizard Content Panel */}
-      <div className="premium-card" style={{ padding: '40px', backgroundColor: '#FFFFFF', borderRadius: '24px' }}>
+      <div className="premium-card wizard-card">
         
         {/* STEP 1: Configuration Summary Check */}
         {step === 1 && (
@@ -244,7 +238,7 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
             </div>
 
             {/* Stepper Buttons */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '32px' }}>
+            <div className="wizard-nav-buttons">
               <button onClick={onReset} className="btn-secondary">
                 <ChevronLeft size={16} /> 구성 수정하기
               </button>
@@ -331,7 +325,7 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
             </div>
 
             {/* Navigation Buttons */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '32px' }}>
+            <div className="wizard-nav-buttons">
               <button onClick={handlePrevStep} className="btn-secondary">
                 <ChevronLeft size={16} /> 이전 단계
               </button>
@@ -401,7 +395,7 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
             </div>
 
             {/* Stepper buttons */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '32px' }}>
+            <div className="wizard-nav-buttons">
               <button onClick={handlePrevStep} className="btn-secondary">
                 <ChevronLeft size={16} /> 이전 단계
               </button>

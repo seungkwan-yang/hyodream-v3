@@ -76,17 +76,15 @@ const AppContent: React.FC = () => {
             width: '100%',
             maxWidth: '1200px',
             margin: '0 auto',
-            padding: '48px 24px 80px 24px',
-          }}>
+          }} className="main-content">
             {renderCustomerTab()}
           </main>
 
           {/* Premium Traditional Traditional Footer */}
-          <footer style={{
+          <footer className="site-footer" style={{
             backgroundColor: '#2C2621',
             color: '#A89F95',
             borderTop: '1.5px solid #3C352E',
-            padding: '60px 40px',
             fontSize: '0.85rem',
             lineHeight: 1.8
           }}>
@@ -96,7 +94,7 @@ const AppContent: React.FC = () => {
               display: 'grid',
               gridTemplateColumns: '1.5fr 1fr 1fr',
               gap: '40px',
-            }} className="responsive-chart-grid">
+            }} className="footer-grid">
               
               {/* Col 1: Branding and contacts */}
               <div>

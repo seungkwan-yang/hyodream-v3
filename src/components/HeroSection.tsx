@@ -8,8 +8,7 @@ export const HeroSection: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '64px' }} className="animate-fade-in-up traditional-bg">
       {/* Visual Hero Banner */}
-      <section style={{
-        padding: '80px 40px',
+      <section className="responsive-hero-banner" style={{
         textAlign: 'center',
         background: 'linear-gradient(180deg, var(--bg-secondary) 0%, rgba(253, 251, 247, 0) 100%)',
         borderRadius: '32px',
@@ -34,9 +33,7 @@ export const HeroSection: React.FC = () => {
           인천·경기 대표 제사상 대행 서비스
         </div>
 
-        <h1 className="serif-font" style={{
-          fontSize: '3rem',
-          lineHeight: '1.3',
+        <h1 className="serif-font responsive-title" style={{
           fontWeight: 900,
           color: 'var(--color-text-main)',
           marginBottom: '24px',
@@ -46,19 +43,17 @@ export const HeroSection: React.FC = () => {
           정성의 한 상, <span style={{ color: 'var(--color-primary)' }}>효드림</span>
         </h1>
 
-        <p style={{
-          fontSize: '1.15rem',
+        <p className="responsive-subtitle" style={{
           color: 'var(--color-text-sub)',
           maxWidth: '650px',
           margin: '0 auto 40px auto',
           fontWeight: 500,
-          lineHeight: '1.7'
         }}>
           오랜 전통의 예법은 깍듯이 지키고, 번거로움은 덜어드립니다.<br />
           엄선된 우리 식재료로 부모님을 대접하는 정성을 담아 새벽녘 정성스레 조리합니다.
         </p>
 
-        <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+        <div className="responsive-btn-container">
           <button
             onClick={() => setCustomerTab('estimator')}
             className="btn-primary"
@@ -148,17 +143,12 @@ export const HeroSection: React.FC = () => {
       </section>
 
       {/* Simple Information Guide Block */}
-      <section className="glass-panel" style={{
+      <section className="glass-panel hero-info-panel" style={{
         padding: '48px',
         borderRadius: '24px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '32px',
-        flexWrap: 'wrap',
         backgroundColor: '#FFFFFF'
       }}>
-        <div style={{ flex: '1', minWidth: '300px' }}>
+        <div style={{ flex: '1' }}>
           <h3 className="serif-font" style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '8px' }}>
             처음이라 상차림 구성이 고민이신가요?
           </h3>

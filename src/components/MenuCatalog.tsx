@@ -70,11 +70,7 @@ export const MenuCatalog: React.FC = () => {
       </div>
 
       {/* Menu Cards Grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-        gap: '24px'
-      }}>
+      <div className="catalog-card-grid">
         {visibleItems.length > 0 ? (
           visibleItems.map((item) => (
             <div key={item.id} className="premium-card korean-border-box" style={{
