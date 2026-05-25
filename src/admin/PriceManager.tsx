@@ -99,21 +99,17 @@ export const PriceManager: React.FC = () => {
 
   // Helper: Upload image file to server and return URL
   const uploadImageToServer = async (file: File): Promise<string | null> => {
-    const formData = new FormData();
-    formData.append('image', file);
-    try {
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
-      if (!res.ok) {
-        const err = await res.json();
-        alert(`이미지 업로드 실패: ${err.error}`);
-        return null;
-      }
-      const data = await res.json();
-      return data.url as string;
-    } catch {
-      alert('이미지 업로드 중 오류가 발생했습니다. 서버를 확인해 주세요.');
-      return null;
-    }
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        resolve(reader.result as string);
+      };
+      reader.onerror = () => {
+        alert('이미지를 처리하는 중 오류가 발생했습니다.');
+        resolve(null);
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   // Category CRUD Handlers
