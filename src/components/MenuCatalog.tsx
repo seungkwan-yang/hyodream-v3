@@ -109,7 +109,7 @@ export const MenuCatalog: React.FC = () => {
                 style={{
                   position: 'relative',
                   width: 'calc(100% + 48px)', // Bleeds out to card margins
-                  height: '180px',
+                  height: '220px',
                   margin: '-32px -24px 20px -24px',
                   overflow: 'hidden',
                   borderBottom: '1px solid var(--border-color)',

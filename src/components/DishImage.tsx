@@ -346,6 +346,7 @@ export const DishImage: React.FC<DishImageProps> = ({ imageUrl, category, name, 
         width: '100%',
         height: '100%',
         objectFit: 'cover',
+        objectPosition: 'center',
         display: 'block',
         ...style
       }}
