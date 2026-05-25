@@ -160,34 +160,6 @@ async function seedDatabase() {
   }
 }
 
-// Debug Endpoint to check Database URL and connectivity on Vercel
-app.get('/api/debug-env', async (req, res) => {
-  const url = process.env.DATABASE_URL || 'default-fallback';
-  const maskedUrl = url.replace(/:([^:@]+)@/, ':***@');
-  
-  let connectStatus = 'unknown';
-  let connectError = null;
-  let client;
-  
-  try {
-    client = await pool.connect();
-    connectStatus = 'success';
-  } catch (err) {
-    connectStatus = 'failed';
-    connectError = err.message;
-  } finally {
-    if (client) client.release();
-  }
-  
-  res.json({
-    databaseUrlUsed: maskedUrl,
-    hasEnvVar: !!process.env.DATABASE_URL,
-    connectStatus,
-    connectError,
-    isVercel: !!process.env.VERCEL
-  });
-});
-
 // REST API 라우트 설계
 // 1. Categories CRUD
 app.get('/api/categories', async (req, res) => {
