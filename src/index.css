@@ -352,3 +352,101 @@ input:focus, select:focus, textarea:focus {
 .animate-fade-in-up {
   animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Mobile Hamburger Responsive Styles */
+@media (max-width: 768px) {
+  /* Hide default horizontal navigation on mobile */
+  .pc-nav {
+    display: none !important;
+  }
+
+  /* Show mobile hamburger trigger button */
+  .mobile-menu-trigger {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--color-primary);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: var(--transition-smooth);
+  }
+  .mobile-menu-trigger:hover {
+    background-color: var(--color-primary-fade);
+  }
+
+  /* Hide regular buttons on mobile header if they mess with layout */
+  .pc-header-btn {
+    display: none !important;
+  }
+
+  /* Adjust header padding and height on mobile */
+  header {
+    padding: 0 20px !important;
+  }
+
+  /* Floating mobile navigation drop panel */
+  .mobile-nav-panel {
+    display: flex !important;
+    flex-direction: column;
+    position: absolute;
+    top: 80px;
+    left: 0;
+    right: 0;
+    background: rgba(253, 251, 247, 0.98);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1.5px solid var(--border-color);
+    padding: 24px;
+    gap: 10px;
+    box-shadow: 0 10px 30px rgba(82, 110, 84, 0.1);
+    z-index: 850;
+    transform-origin: top;
+    animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .mobile-nav-link {
+    width: 100%;
+    text-align: left;
+    padding: 12px 20px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 12px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-sub);
+    transition: var(--transition-smooth);
+    cursor: pointer;
+  }
+
+  .mobile-nav-link:hover {
+    background-color: var(--color-primary-fade);
+    color: var(--color-primary);
+  }
+
+  .mobile-nav-link.active {
+    color: var(--color-primary);
+    background-color: var(--color-primary-fade);
+  }
+}
+
+/* PC Default styles for hamburger */
+.mobile-menu-trigger {
+  display: none;
+}
+.mobile-nav-panel {
+  display: none;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: scaleY(0.9) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1) translateY(0);
+  }
+}
