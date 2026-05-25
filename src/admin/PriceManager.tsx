@@ -1249,15 +1249,70 @@ export const PriceManager: React.FC = () => {
 
                 <div>
                   <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-sub)', display: 'block', marginBottom: '6px' }}>
-                    요리 이미지 경로 (URL)
+                    요리 이미지 업로드 (로컬 이미지)
                   </label>
-                  <input
-                    type="text"
-                    placeholder="예: https://example.com/dish.jpg (미지정 시 카테고리 일러스트 적용)"
-                    value={newDishImageUrl}
-                    onChange={(e) => setNewDishImageUrl(e.target.value)}
-                    style={{ fontSize: '0.85rem', padding: '10px 14px' }}
-                  />
+                  <div style={{
+                    border: '2px dashed var(--border-color)',
+                    borderRadius: '12px',
+                    padding: '20px 16px',
+                    textAlign: 'center',
+                    backgroundColor: '#FAF8F5',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    transition: 'var(--transition-smooth)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--color-primary)'}
+                  onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}
+                  >
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setNewDishImageUrl(reader.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      style={{
+                        position: 'absolute',
+                        top: 0, left: 0, width: '100%', height: '100%',
+                        opacity: 0, cursor: 'pointer', zIndex: 10
+                      }}
+                    />
+                    {newDishImageUrl && newDishImageUrl.startsWith('data:') ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', position: 'relative', zIndex: 20 }}>
+                        <img
+                          src={newDishImageUrl}
+                          alt="preview"
+                          style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border-color)' }}
+                        />
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 700 }}>로컬 이미지 선택 완료</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setNewDishImageUrl('');
+                          }}
+                          style={{
+                            fontSize: '0.7rem', color: 'var(--color-rose)', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 700
+                          }}
+                        >
+                          삭제하고 기본 이미지 사용
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '1.5rem' }}>📷</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-text-sub)' }}>클릭하여 컴퓨터의 이미지 파일 업로드</span>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>권장 비율 4:3 (jpg, png, webp 등)</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -1355,13 +1410,69 @@ export const PriceManager: React.FC = () => {
                                     placeholder="해시태그 (쉼표 구분)"
                                     style={{ fontSize: '0.8rem', padding: '8px' }}
                                   />
-                                  <input
-                                    type="text"
-                                    value={editDishImageUrl}
-                                    onChange={(e) => setEditDishImageUrl(e.target.value)}
-                                    placeholder="이미지 경로 (URL 또는 'jeon', 'jeok' 등)"
-                                    style={{ fontSize: '0.8rem', padding: '8px' }}
-                                  />
+                                  <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-sub)', display: 'block', marginBottom: '4px' }}>
+                                      요리 이미지 업로드 (로컬 이미지)
+                                    </label>
+                                    <div style={{
+                                      border: '1.5px dashed var(--border-color)',
+                                      borderRadius: '8px',
+                                      padding: '12px',
+                                      textAlign: 'center',
+                                      backgroundColor: '#FAF8F5',
+                                      cursor: 'pointer',
+                                      position: 'relative'
+                                    }}>
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) {
+                                            const reader = new FileReader();
+                                            reader.onloadend = () => {
+                                              setEditDishImageUrl(reader.result as string);
+                                            };
+                                            reader.readAsDataURL(file);
+                                          }
+                                        }}
+                                        style={{
+                                          position: 'absolute',
+                                          top: 0, left: 0, width: '100%', height: '100%',
+                                          opacity: 0, cursor: 'pointer', zIndex: 10
+                                        }}
+                                      />
+                                      {editDishImageUrl ? (
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', position: 'relative', zIndex: 20 }}>
+                                          <img
+                                            src={editDishImageUrl.startsWith('data:') ? editDishImageUrl : undefined}
+                                            alt="preview"
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                            style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border-color)' }}
+                                          />
+                                          <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 700 }}>이미지 등록됨</span>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.preventDefault();
+                                              e.stopPropagation();
+                                              setEditDishImageUrl('');
+                                            }}
+                                            style={{
+                                              fontSize: '0.7rem', color: 'var(--color-rose)', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 600
+                                            }}
+                                          >
+                                            기본값으로 변경
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                                          <span style={{ fontSize: '1rem' }}>📷</span>
+                                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-sub)' }}>클릭하여 컴퓨터 이미지 선택</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
                                   <textarea
                                     rows={2}
                                     value={editDishDesc}
