@@ -102,7 +102,44 @@ export const PriceManager: React.FC = () => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        resolve(reader.result as string);
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          // Resize limit: Max dimension 800px for optimal balance of quality and size
+          const MAX_SIZE = 800;
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            // Compress to JPEG with 70% quality
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            console.log(`[HyoDream Compressor] ${file.name} compressed: ${(file.size / 1024).toFixed(1)}KB -> ${(compressedDataUrl.length / 1024).toFixed(1)}KB`);
+            resolve(compressedDataUrl);
+          } else {
+            resolve(reader.result as string);
+          }
+        };
+        img.onerror = () => {
+          resolve(reader.result as string);
+        };
+        img.src = reader.result as string;
       };
       reader.onerror = () => {
         alert('이미지를 처리하는 중 오류가 발생했습니다.');

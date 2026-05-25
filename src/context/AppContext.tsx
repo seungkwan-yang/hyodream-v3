@@ -196,13 +196,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map(cat => (cat.id === id ? { ...cat, ...updated } : cat))
     );
 
-    // Sync to backend DB
+    // Sync to backend DB with synchronized merged payload
     const cat = menuCategories.find(c => c.id === id);
     if (cat) {
+      const mergedPayload = { ...cat, ...updated };
       fetch(`${API_BASE}/api/categories/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...cat, ...updated })
+        body: JSON.stringify(mergedPayload)
       }).catch(err => console.error('[HyoDream DB Sync] updateMenuCategory failed:', err));
     }
   };
@@ -225,10 +226,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const pkg = baseMenus.find(p => p.id === id);
     if (pkg) {
+      const mergedPayload = { ...pkg, price };
       fetch(`${API_BASE}/api/base-menus/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...pkg, price })
+        body: JSON.stringify(mergedPayload)
       }).catch(err => console.error('[HyoDream DB Sync] updateBaseMenuPrice failed:', err));
     }
   };
@@ -240,10 +242,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const pkg = baseMenus.find(p => p.id === packageId);
     if (pkg) {
+      const mergedPayload = { ...pkg, itemIds };
       fetch(`${API_BASE}/api/base-menus/${packageId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...pkg, itemIds })
+        body: JSON.stringify(mergedPayload)
       }).catch(err => console.error('[HyoDream DB Sync] updateBaseMenuItems failed:', err));
     }
   };
@@ -262,10 +265,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const pkg = baseMenus.find(p => p.id === id);
     if (pkg) {
+      const mergedPayload = { ...pkg, visible: updatedVal };
       fetch(`${API_BASE}/api/base-menus/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...pkg, visible: updatedVal })
+        body: JSON.stringify(mergedPayload)
       }).catch(err => console.error('[HyoDream DB Sync] toggleBaseMenuVisibility failed:', err));
     }
   };
@@ -296,10 +300,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const pkg = baseMenus.find(p => p.id === id);
     if (pkg) {
+      const mergedPayload = { ...pkg, ...updated };
       fetch(`${API_BASE}/api/base-menus/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...pkg, ...updated })
+        body: JSON.stringify(mergedPayload)
       }).catch(err => console.error('[HyoDream DB Sync] updateBaseMenu failed:', err));
     }
   };
@@ -338,10 +343,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const item = catalogItems.find(i => i.id === id);
     if (item) {
+      const mergedPayload = { ...item, ...updated };
       fetch(`${API_BASE}/api/catalog-items/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...item, ...updated })
+        body: JSON.stringify(mergedPayload)
       }).catch(err => console.error('[HyoDream DB Sync] updateCatalogItem failed:', err));
     }
   };
@@ -410,10 +416,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const opt = customOptions.find(o => o.id === id);
     if (opt) {
+      const mergedPayload = { ...opt, ...updated };
       fetch(`${API_BASE}/api/custom-options/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...opt, ...updated })
+        body: JSON.stringify(mergedPayload)
       }).catch(err => console.error('[HyoDream DB Sync] updateCustomOption failed:', err));
     }
   };
@@ -433,10 +440,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const opt = customOptions.find(o => o.id === id);
     if (opt) {
+      const mergedPayload = { ...opt, price };
       fetch(`${API_BASE}/api/custom-options/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...opt, price })
+        body: JSON.stringify(mergedPayload)
       }).catch(err => console.error('[HyoDream DB Sync] updateCustomOptionPrice failed:', err));
     }
   };
