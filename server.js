@@ -17,7 +17,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 8080;
 const publicDir = path.join(__dirname, 'dist');
-const uploadsDir = process.env.VERCEL ? '/tmp/uploads' : path.join(__dirname, 'uploads');
+const uploadsDir = process.env.VERCEL ? '/tmp/uploads' : path.join(__dirname, 'public', 'uploads');
 
 // Ensure uploads directory exists
 if (!fs.existsSync(uploadsDir)) {
