@@ -80,6 +80,7 @@ export const PriceManager: React.FC = () => {
   const [newOptType, setNewOptType] = useState<'addition' | 'subtraction'>('addition');
   const [newOptPrice, setNewOptPrice] = useState('');
   const [newOptDesc, setNewOptDesc] = useState('');
+  const [newOptImageUrl, setNewOptImageUrl] = useState('');
   const [showAddOptForm, setShowAddOptForm] = useState(false);
 
   // Editing Custom Option State (Inline)
@@ -88,6 +89,32 @@ export const PriceManager: React.FC = () => {
   const [editOptType, setEditOptType] = useState<'addition' | 'subtraction'>('addition');
   const [editOptPrice, setEditOptPrice] = useState('');
   const [editOptDesc, setEditOptDesc] = useState('');
+  const [editOptImageUrl, setEditOptImageUrl] = useState('');
+
+  // Image Upload Loading States
+  const [uploadingNewDish, setUploadingNewDish] = useState(false);
+  const [uploadingEditDish, setUploadingEditDish] = useState(false);
+  const [uploadingNewOpt, setUploadingNewOpt] = useState(false);
+  const [uploadingEditOpt, setUploadingEditOpt] = useState(false);
+
+  // Helper: Upload image file to server and return URL
+  const uploadImageToServer = async (file: File): Promise<string | null> => {
+    const formData = new FormData();
+    formData.append('image', file);
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(`이미지 업로드 실패: ${err.error}`);
+        return null;
+      }
+      const data = await res.json();
+      return data.url as string;
+    } catch {
+      alert('이미지 업로드 중 오류가 발생했습니다. 서버를 확인해 주세요.');
+      return null;
+    }
+  };
 
   // Category CRUD Handlers
   const handleAddCategorySubmit = (e: React.FormEvent) => {
@@ -183,7 +210,7 @@ export const PriceManager: React.FC = () => {
   };
 
   // Custom Option CMS Handlers
-  const handleAddOptSubmit = (e: React.FormEvent) => {
+  const handleAddOptSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newOptName.trim()) {
       alert('옵션 이름을 기입해 주세요.');
@@ -194,13 +221,15 @@ export const PriceManager: React.FC = () => {
       name: newOptName,
       type: newOptType,
       price: newOptType === 'subtraction' ? -Math.abs(priceNum) : Math.abs(priceNum),
-      description: newOptDesc || '상세 옵션 설명이 없습니다.'
+      description: newOptDesc || '상세 옵션 설명이 없습니다.',
+      imageUrl: newOptImageUrl || undefined
     });
     setNewOptName('');
     setNewOptPrice('');
     setNewOptDesc('');
+    setNewOptImageUrl('');
     setShowAddOptForm(false);
-    triggerFeedback('새로운 맞춤 옵션이 성공적으로 추가되었습니다.');
+    triggerFeedback('새로운 맞요 옵션이 성공적으로 추가되었습니다.');
   };
 
   const startEditOpt = (opt: any) => {
@@ -209,6 +238,7 @@ export const PriceManager: React.FC = () => {
     setEditOptType(opt.type);
     setEditOptPrice(String(Math.abs(opt.price)));
     setEditOptDesc(opt.description);
+    setEditOptImageUrl(opt.imageUrl || '');
   };
 
   const handleSaveEditOpt = () => {
@@ -221,9 +251,11 @@ export const PriceManager: React.FC = () => {
       name: editOptName,
       type: editOptType,
       price: editOptType === 'subtraction' ? -Math.abs(priceNum) : Math.abs(priceNum),
-      description: editOptDesc
+      description: editOptDesc,
+      imageUrl: editOptImageUrl || undefined
     });
     setEditingOptId(null);
+    setEditOptImageUrl('');
     triggerFeedback('맞춤 옵션 정보가 성공적으로 수정되었습니다.');
   };
 
@@ -1006,6 +1038,52 @@ export const PriceManager: React.FC = () => {
                       />
                     </div>
 
+                    {/* New Option Image Upload */}
+                    <div>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, display: 'block', marginBottom: '4px' }}>옵션 이미지 (선택)</label>
+                      <div style={{
+                        border: `1.5px dashed ${uploadingNewOpt ? 'var(--color-primary)' : 'var(--border-color)'}`,
+                        borderRadius: '8px', padding: '10px',
+                        textAlign: 'center', backgroundColor: '#FAF8F5',
+                        cursor: uploadingNewOpt ? 'not-allowed' : 'pointer',
+                        position: 'relative'
+                      }}>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={uploadingNewOpt}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setUploadingNewOpt(true);
+                            const url = await uploadImageToServer(file);
+                            setUploadingNewOpt(false);
+                            if (url) setNewOptImageUrl(url);
+                            e.target.value = '';
+                          }}
+                          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: 10 }}
+                        />
+                        {uploadingNewOpt ? (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                            <div style={{ width: '18px', height: '18px', border: '2px solid var(--color-primary)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                            <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 700 }}>업로드 중...</span>
+                          </div>
+                        ) : newOptImageUrl ? (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', position: 'relative', zIndex: 20 }}>
+                            <img src={newOptImageUrl} alt="opt-preview" style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border-color)' }} />
+                            <span style={{ fontSize: '0.72rem', color: 'var(--color-primary)', fontWeight: 700 }}>✅ 이미지 등록됨</span>
+                            <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setNewOptImageUrl(''); }}
+                              style={{ fontSize: '0.65rem', color: 'var(--color-rose)', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 600 }}>삭제</button>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '1rem' }}>🖼️</span>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-text-sub)' }}>클릭하여 옵션 이미지 업로드</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
                     <button
                       type="submit"
                       className="btn-primary"
@@ -1080,6 +1158,51 @@ export const PriceManager: React.FC = () => {
                             placeholder="옵션 상세 설명"
                             style={{ fontSize: '0.8rem', padding: '6px' }}
                           />
+                        </div>
+                        {/* Option Image Upload (Edit) */}
+                        <div>
+                          <label style={{ fontSize: '0.7rem', fontWeight: 700, display: 'block', marginBottom: '2px' }}>옵션 이미지</label>
+                          <div style={{
+                            border: `1.5px dashed ${uploadingEditOpt ? 'var(--color-primary)' : 'var(--border-color)'}`,
+                            borderRadius: '8px', padding: '8px',
+                            textAlign: 'center', backgroundColor: '#FAF8F5',
+                            cursor: uploadingEditOpt ? 'not-allowed' : 'pointer',
+                            position: 'relative'
+                          }}>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={uploadingEditOpt}
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                setUploadingEditOpt(true);
+                                const url = await uploadImageToServer(file);
+                                setUploadingEditOpt(false);
+                                if (url) setEditOptImageUrl(url);
+                                e.target.value = '';
+                              }}
+                              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: 10 }}
+                            />
+                            {uploadingEditOpt ? (
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                                <div style={{ width: '16px', height: '16px', border: '2px solid var(--color-primary)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                                <span style={{ fontSize: '0.7rem', color: 'var(--color-primary)', fontWeight: 700 }}>업로드 중...</span>
+                              </div>
+                            ) : editOptImageUrl ? (
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', position: 'relative', zIndex: 20 }}>
+                                <img src={editOptImageUrl} alt="opt-preview" style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border-color)' }} />
+                                <span style={{ fontSize: '0.7rem', color: 'var(--color-primary)', fontWeight: 700 }}>✅ 등록됨</span>
+                                <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditOptImageUrl(''); }}
+                                  style={{ fontSize: '0.65rem', color: 'var(--color-rose)', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 600 }}>삭제</button>
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                                <span style={{ fontSize: '0.85rem' }}>🖼️</span>
+                                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-text-sub)' }}>클릭하여 이미지 변경</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', marginTop: '4px' }}>
                           <button
@@ -1267,30 +1390,40 @@ export const PriceManager: React.FC = () => {
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={(e) => {
+                      disabled={uploadingNewDish}
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setNewDishImageUrl(reader.result as string);
-                          };
-                          reader.readAsDataURL(file);
-                        }
+                        if (!file) return;
+                        setUploadingNewDish(true);
+                        const url = await uploadImageToServer(file);
+                        setUploadingNewDish(false);
+                        if (url) setNewDishImageUrl(url);
+                        e.target.value = '';
                       }}
                       style={{
                         position: 'absolute',
                         top: 0, left: 0, width: '100%', height: '100%',
-                        opacity: 0, cursor: 'pointer', zIndex: 10
+                        opacity: 0, cursor: uploadingNewDish ? 'not-allowed' : 'pointer', zIndex: 10
                       }}
                     />
-                    {newDishImageUrl && newDishImageUrl.startsWith('data:') ? (
+                    {uploadingNewDish ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                        <div style={{
+                          width: '32px', height: '32px',
+                          border: '3px solid var(--color-primary)',
+                          borderTopColor: 'transparent', borderRadius: '50%',
+                          animation: 'spin 0.8s linear infinite'
+                        }} />
+                        <span style={{ fontSize: '0.8rem', color: 'var(--color-primary)', fontWeight: 700 }}>서버에 업로드 중...</span>
+                      </div>
+                    ) : newDishImageUrl ? (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', position: 'relative', zIndex: 20 }}>
                         <img
                           src={newDishImageUrl}
                           alt="preview"
                           style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border-color)' }}
                         />
-                        <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 700 }}>로컬 이미지 선택 완료</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 700 }}>✅ 이미지 업로드 완료</span>
                         <button
                           type="button"
                           onClick={(e) => {
@@ -1415,42 +1548,52 @@ export const PriceManager: React.FC = () => {
                                       요리 이미지 업로드 (로컬 이미지)
                                     </label>
                                     <div style={{
-                                      border: '1.5px dashed var(--border-color)',
+                                      border: `1.5px dashed ${uploadingEditDish ? 'var(--color-primary)' : 'var(--border-color)'}`,
                                       borderRadius: '8px',
                                       padding: '12px',
                                       textAlign: 'center',
                                       backgroundColor: '#FAF8F5',
-                                      cursor: 'pointer',
+                                      cursor: uploadingEditDish ? 'not-allowed' : 'pointer',
                                       position: 'relative'
                                     }}>
                                       <input
                                         type="file"
                                         accept="image/*"
-                                        onChange={(e) => {
+                                        disabled={uploadingEditDish}
+                                        onChange={async (e) => {
                                           const file = e.target.files?.[0];
-                                          if (file) {
-                                            const reader = new FileReader();
-                                            reader.onloadend = () => {
-                                              setEditDishImageUrl(reader.result as string);
-                                            };
-                                            reader.readAsDataURL(file);
-                                          }
+                                          if (!file) return;
+                                          setUploadingEditDish(true);
+                                          const url = await uploadImageToServer(file);
+                                          setUploadingEditDish(false);
+                                          if (url) setEditDishImageUrl(url);
+                                          e.target.value = '';
                                         }}
                                         style={{
                                           position: 'absolute',
                                           top: 0, left: 0, width: '100%', height: '100%',
-                                          opacity: 0, cursor: 'pointer', zIndex: 10
+                                          opacity: 0, cursor: uploadingEditDish ? 'not-allowed' : 'pointer', zIndex: 10
                                         }}
                                       />
-                                      {editDishImageUrl ? (
+                                      {uploadingEditDish ? (
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                          <div style={{
+                                            width: '20px', height: '20px',
+                                            border: '2px solid var(--color-primary)',
+                                            borderTopColor: 'transparent', borderRadius: '50%',
+                                            animation: 'spin 0.8s linear infinite'
+                                          }} />
+                                          <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 700 }}>업로드 중...</span>
+                                        </div>
+                                      ) : editDishImageUrl ? (
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', position: 'relative', zIndex: 20 }}>
                                           <img
-                                            src={editDishImageUrl.startsWith('data:') ? editDishImageUrl : undefined}
+                                            src={editDishImageUrl}
                                             alt="preview"
                                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                             style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border-color)' }}
                                           />
-                                          <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 700 }}>이미지 등록됨</span>
+                                          <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 700 }}>✅ 이미지 등록됨</span>
                                           <button
                                             type="button"
                                             onClick={(e) => {

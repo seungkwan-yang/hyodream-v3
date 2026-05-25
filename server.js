@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import pg from 'pg';
+import multer from 'multer';
 
 // Initialize configuration
 dotenv.config();
@@ -16,10 +17,48 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 8080;
 const publicDir = path.join(__dirname, 'dist');
+const uploadsDir = path.join(__dirname, 'uploads');
+
+// Ensure uploads directory exists
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log('[HyoDream] Created uploads directory:', uploadsDir);
+}
+
+// Multer storage configuration
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `dish-${uniqueSuffix}${ext}`);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp|avif/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) {
+      cb(null, true);
+    } else {
+      cb(new Error('이미지 파일만 업로드할 수 있습니다. (jpg, png, gif, webp, avif)'));
+    }
+  }
+});
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Serve uploaded images as static files
+app.use('/uploads', express.static(uploadsDir));
 
 // Neon PostgreSQL Connection Pool Setup
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_b4ZyualKSh8R@ep-sparkling-art-aogor3ae-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
@@ -214,6 +253,28 @@ app.delete('/api/base-menus/:id', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// 2.5 File Upload API
+app.post('/api/upload', upload.single('image'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: '업로드된 파일이 없습니다.' });
+    }
+    const fileUrl = `/uploads/${req.file.filename}`;
+    console.log(`[HyoDream Upload] File saved: ${req.file.filename}`);
+    res.json({ url: fileUrl, filename: req.file.filename });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// File upload error handler
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError || err.message.includes('이미지')) {
+    return res.status(400).json({ error: err.message });
+  }
+  next(err);
 });
 
 // 3. Catalog Items CRUD
