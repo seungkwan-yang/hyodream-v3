@@ -10,7 +10,7 @@ interface Review {
 }
 
 export const Reviews: React.FC = () => {
-  // 13 high-quality customer reviews with slightly varied ratings and dates for sorting demonstration
+  // 15 high-quality customer reviews with slightly varied ratings and dates for sorting/pagination demonstration
   const reviews: Review[] = [
     {
       name: '이*호 (인천 연수구)',
@@ -102,14 +102,32 @@ export const Reviews: React.FC = () => {
       date: '2026-04-18',
       content: '배송 기사님께서 무척 친절하셨고 안전 탑차로 직접 집 앞까지 정성스레 들어다 주셨습니다. 음식의 신선도와 포장 상태가 그 어떤 온라인 반찬 샵보다 프리미엄했습니다. 효드림 적극 강추합니다.',
       packageType: '명가 전통상 (기제사 대)'
+    },
+    {
+      name: '송*민 (경기도 부천시)',
+      rating: 5,
+      date: '2026-04-14',
+      content: '음식 간이 삼삼하니 아주 좋았고 양도 생각보다 푸짐해서 넉넉히 나눠 먹었습니다. 동네 반찬 가게보다 퀄리티가 훨씬 높은 제사 음식 전용 샵이라 만족도가 큽니다.',
+      packageType: '표준 맞춤상 (기제사 중)'
+    },
+    {
+      name: '조*정 (인천 남동구)',
+      rating: 4, // 4-star for rating variation
+      date: '2026-04-10',
+      content: '과일이 싱싱하고 사과와 배 크기가 특등품이었습니다. 전 종류도 정갈하고 가열해서 데우니까 기름기 쏙 빠지고 바삭하네요. 강추 드립니다.',
+      packageType: '소가족 실속상 (기제사 소)'
     }
   ];
 
-  // Sorting state for PC remaining reviews list
+  // Sorting and Pagination states
   const [sortBy, setSortBy] = useState<'rating' | 'date'>('rating');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const ITEMS_PER_PAGE = 10;
 
   const handleSort = (field: 'rating' | 'date') => {
+    // Reset to page 1 upon changing sorting criteria to avoid out-of-bounds UI confusion
+    setCurrentPage(1);
     if (sortBy === field) {
       setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
     } else {
@@ -141,6 +159,13 @@ export const Reviews: React.FC = () => {
     return sortOrder === 'asc' ? comparison : -comparison;
   });
 
+  // 4. Paginate remaining reviews (10 items per page)
+  const totalPages = Math.ceil(sortedRemaining.length / ITEMS_PER_PAGE);
+  const paginatedRemaining = sortedRemaining.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '56px' }} className="animate-fade-in-up">
       {/* Title area (Shared) */}
@@ -166,7 +191,7 @@ export const Reviews: React.FC = () => {
         </div>
 
         {/* ---------------------------------------------------- */}
-        {/* MOBILE LAYOUT BLOCK: Show all 13 reviews as card grid */}
+        {/* MOBILE LAYOUT BLOCK: Show all 15 reviews as card grid */}
         {/* ---------------------------------------------------- */}
         <div className="mobile-only-block">
           <div style={{
@@ -215,7 +240,7 @@ export const Reviews: React.FC = () => {
         </div>
 
         {/* ---------------------------------------------------- */}
-        {/* PC LAYOUT BLOCK: Top 3 Cards + Sorting Controls + Table List */}
+        {/* PC LAYOUT BLOCK: Top 3 Cards + Sorting Controls + Paginated Table List */}
         {/* ---------------------------------------------------- */}
         <div className="pc-only-block">
           {/* Top 3 Featured reviews card grid */}
@@ -352,12 +377,12 @@ export const Reviews: React.FC = () => {
               boxShadow: 'var(--shadow-sm)',
               border: '1px solid var(--border-color)'
             }}>
-              {sortedRemaining.map((rev, idx) => (
+              {paginatedRemaining.map((rev, idx) => (
                 <div key={idx} style={{
                   display: 'flex',
                   alignItems: 'center',
                   padding: '18px 24px',
-                  borderBottom: idx === sortedRemaining.length - 1 ? 'none' : '1px solid var(--border-color)',
+                  borderBottom: idx === paginatedRemaining.length - 1 ? 'none' : '1px solid var(--border-color)',
                   gap: '24px'
                 }} className="table-row-hover">
                   {/* Rating stars & Date */}
@@ -383,6 +408,83 @@ export const Reviews: React.FC = () => {
                 </div>
               ))}
             </div>
+
+            {/* Premium Pagination Controls */}
+            {totalPages > 1 && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '8px',
+                marginTop: '24px'
+              }}>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    backgroundColor: '#FFFFFF',
+                    color: currentPage === 1 ? 'var(--color-text-muted)' : 'var(--color-text-sub)',
+                    opacity: currentPage === 1 ? 0.5 : 1,
+                    transition: 'var(--transition-smooth)',
+                    outline: 'none'
+                  }}
+                >
+                  이전
+                </button>
+
+                {Array.from({ length: totalPages }).map((_, i) => {
+                  const pageNumber = i + 1;
+                  return (
+                    <button
+                      key={pageNumber}
+                      onClick={() => setCurrentPage(pageNumber)}
+                      style={{
+                        width: '34px',
+                        height: '34px',
+                        borderRadius: '8px',
+                        border: '1px solid',
+                        borderColor: currentPage === pageNumber ? 'var(--color-primary)' : 'var(--border-color)',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        backgroundColor: currentPage === pageNumber ? 'var(--color-primary)' : '#FFFFFF',
+                        color: currentPage === pageNumber ? '#FFFFFF' : 'var(--color-text-sub)',
+                        transition: 'var(--transition-smooth)',
+                        outline: 'none'
+                      }}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                })}
+
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    backgroundColor: '#FFFFFF',
+                    color: currentPage === totalPages ? 'var(--color-text-muted)' : 'var(--color-text-sub)',
+                    opacity: currentPage === totalPages ? 0.5 : 1,
+                    transition: 'var(--transition-smooth)',
+                    outline: 'none'
+                  }}
+                >
+                  다음
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </section>
