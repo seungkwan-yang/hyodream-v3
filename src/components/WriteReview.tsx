@@ -297,7 +297,7 @@ export const WriteReview: React.FC = () => {
                 inputMode="numeric"
                 value={custPhone}
                 onChange={(e) => setCustPhone(formatKoreanPhoneNumber(e.target.value))}
-                placeholder="예: 010-5678-1234 (숫자 키패드 지원, 자동 기입)"
+                placeholder="예: 010-5678-1234"
                 style={{
                   width: '100%',
                   padding: '14px 18px',

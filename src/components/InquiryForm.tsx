@@ -393,7 +393,7 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
                 <input
                   type="tel"
                   inputMode="numeric"
-                  placeholder="010-1234-5678 (숫자 키패드 지원, 자동 기입)"
+                  placeholder="예: 010-1234-5678"
                   value={phone}
                   onChange={(e) => setPhone(formatKoreanPhoneNumber(e.target.value))}
                 />
