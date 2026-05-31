@@ -1,20 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600;700;900&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  /* Color Palette - Premium K-Modern Stable Pastel Sage & Soft Warm Pink */
-  --bg-primary: #F4F7F4;
-  --bg-secondary: #EBF0EA;
-  --bg-tertiary: #E0E8DF;
-  --color-primary: #526E54;
-  --color-primary-light: #688A6B;
-  --color-primary-dark: #3B523D;
-  --color-primary-fade: rgba(82, 110, 84, 0.08);
-  --color-text-main: #2C332D;
-  --color-text-sub: #4E5A50;
-  --color-text-muted: #8E9E90;
+  /* Color Palette - Premium K-Modern (Ink Slate) */
+  --bg-primary: #F6F7F9;
+  --bg-secondary: #EAECEF;
+  --bg-tertiary: #DEE1E5;
+  --color-primary: #3E4A5A;
+  --color-primary-light: #546070;
+  --color-primary-dark: #2A333F;
+  --color-primary-fade: rgba(62, 74, 90, 0.08);
+  --color-text-main: #1C2025;
+  --color-text-sub: #454E59;
+  --color-text-muted: #7E8A99;
   --color-gold: #E6C594;
   --color-rose: #E3B098;
-  --border-color: #DDE3DC;
+  --border-color: #E2E8F0;
   
   /* Layout & Shadows */
   --radius-sm: 8px;
