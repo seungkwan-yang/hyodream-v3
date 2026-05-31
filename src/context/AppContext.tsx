@@ -3,7 +3,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 // Type definitions
 export type ViewMode = 'customer' | 'admin';
 export type CustomerTab = 'home' | 'estimator' | 'menu' | 'reviews' | 'faq' | 'write-review';
-export type AdminTab = 'dashboard' | 'inquiries' | 'pricing';
+export type AdminTab = 'dashboard' | 'inquiries' | 'pricing' | 'settings';
+export type ThemeType = 'sage' | 'indigo' | 'burgundy' | 'slate' | 'terracotta';
 export type InquiryStatus = 'pending' | 'approved' | 'processing' | 'completed';
 
 // Individual dish/item in the catalog
@@ -74,6 +75,8 @@ interface AppContextType {
   setCustomerTab: (tab: CustomerTab) => void;
   adminTab: AdminTab;
   setAdminTab: (tab: AdminTab) => void;
+  theme: ThemeType;
+  setTheme: (theme: ThemeType) => void;
   
   // Menu Categories
   menuCategories: MenuCategory[];
@@ -127,6 +130,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [customerTab, setCustomerTab] = useState<CustomerTab>('home');
   const [adminTab, setAdminTab] = useState<AdminTab>('dashboard');
+  
+  const [theme, setTheme] = useState<ThemeType>(() => {
+    const saved = localStorage.getItem('hyodream_theme');
+    return (saved as ThemeType) || 'slate';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('hyodream_theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   const [menuCategories, setMenuCategories] = useState<MenuCategory[]>([]);
   const [baseMenus, setBaseMenus] = useState<BaseMenu[]>([]);
@@ -522,6 +535,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCustomerTab,
         adminTab,
         setAdminTab,
+        theme,
+        setTheme,
         menuCategories,
         addMenuCategory,
         updateMenuCategory,

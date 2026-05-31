@@ -3,7 +3,8 @@ import { useApp } from '../context/AppContext';
 import { AdminStats } from './AdminStats';
 import { OrderList } from './OrderList';
 import { PriceManager } from './PriceManager';
-import { LayoutDashboard, ClipboardList, Settings, Sparkles } from 'lucide-react';
+import { ThemeSettings } from './ThemeSettings';
+import { LayoutDashboard, ClipboardList, Settings, Sparkles, Palette } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
   const { adminTab, setAdminTab, addInquiry, inquiries } = useApp();
@@ -77,6 +78,8 @@ export const AdminDashboard: React.FC = () => {
         return <OrderList />;
       case 'pricing':
         return <PriceManager />;
+      case 'settings':
+        return <ThemeSettings />;
       default:
         return <AdminStats />;
     }
@@ -153,7 +156,22 @@ export const AdminDashboard: React.FC = () => {
             }}
           >
             <Settings size={18} />
-            메뉴 단가/옵션 관리
+            단가 및 카탈로그 관리
+          </button>
+
+          <button
+            onClick={() => setAdminTab('settings')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '12px',
+              width: '100%', padding: '14px 18px', border: 'none', borderRadius: '12px',
+              fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer',
+              textAlign: 'left', transition: 'var(--transition-smooth)',
+              backgroundColor: adminTab === 'settings' ? 'var(--color-primary-fade)' : 'transparent',
+              color: adminTab === 'settings' ? 'var(--color-primary)' : 'var(--color-text-sub)'
+            }}
+          >
+            <Palette size={18} />
+            테마 설정
           </button>
         </nav>
 
@@ -198,11 +216,13 @@ export const AdminDashboard: React.FC = () => {
               {adminTab === 'dashboard' && '실시간 현황판 (Overview)'}
               {adminTab === 'inquiries' && '주문 및 결제 내역 관리'}
               {adminTab === 'pricing' && '상품 단가 및 맞춤 옵션 관리'}
+              {adminTab === 'settings' && '시스템 테마 설정'}
             </h1>
             <p style={{ fontSize: '0.85rem', color: 'var(--color-text-sub)', marginTop: '4px' }}>
               {adminTab === 'dashboard' && '효드림 사이트에 유입되는 매출 지표와 핵심 현황 통계입니다.'}
               {adminTab === 'inquiries' && '고객이 주문하고 결제한 실시간 주문 명세서를 열람하고 상태를 조율합니다.'}
               {adminTab === 'pricing' && '상차림 패키지 가격 및 프리미엄 단품 단가를 실시간으로 변경합니다.'}
+              {adminTab === 'settings' && '관리자 페이지의 브랜드 색상 및 테마를 구성합니다.'}
             </p>
           </div>
 
