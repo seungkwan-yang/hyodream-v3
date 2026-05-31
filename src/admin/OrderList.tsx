@@ -6,13 +6,71 @@ import { Search, Calendar, MapPin, Phone, Edit3, Trash2, Clipboard, X, CheckCirc
 import confetti from 'canvas-confetti';
 
 export const OrderList: React.FC = () => {
-  const { inquiries, updateInquiryStatus, updateInquiryNotes, deleteInquiry } = useApp();
+  const { inquiries, updateInquiryStatus, updateInquiryNotes, deleteInquiry, addInquiry } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [yearMonthFilter, setYearMonthFilter] = useState<string>('all');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>('all');
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
   const [noteText, setNoteText] = useState('');
+  
+  // Add Manual Order States
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newOrder, setNewOrder] = useState({
+    customerName: '',
+    phone: '',
+    ritualType: '효드림 기본 상차림',
+    date: new Date().toISOString().split('T')[0],
+    timeSlot: '오전 10:00 ~ 오후 12:00',
+    address: '',
+    addressDetail: '',
+    paymentMethod: '무통장 입금',
+    totalPrice: 0,
+    status: 'pending' as InquiryStatus
+  });
+
+  const handleAddNewOrder = () => {
+    if (!newOrder.customerName || !newOrder.phone || !newOrder.date) {
+      alert('고객명, 연락처, 제사 일정은 필수 입력 사항입니다.');
+      return;
+    }
+    // Using the addInquiry from the top level useApp hook
+    const newInquiry = {
+      customerName: newOrder.customerName,
+      phone: newOrder.phone,
+      ritualType: newOrder.ritualType,
+      date: newOrder.date,
+      timeSlot: newOrder.timeSlot,
+      address: newOrder.address,
+      addressDetail: newOrder.addressDetail,
+      specialRequests: '관리자 수동 등록',
+      customizations: [],
+      subtractions: [],
+      totalPrice: Number(newOrder.totalPrice),
+      paymentMethod: newOrder.paymentMethod,
+      status: newOrder.status,
+      paymentStatus: newOrder.status === 'pending' ? 'pending' : 'paid' as any
+    };
+
+    addInquiry(newInquiry);
+    
+    alert('수동 주문이 성공적으로 추가되었습니다.');
+    setIsAddModalOpen(false);
+    
+    // Reset form
+    setNewOrder({
+      customerName: '',
+      phone: '',
+      ritualType: '효드림 기본 상차림',
+      date: new Date().toISOString().split('T')[0],
+      timeSlot: '오전 10:00 ~ 오후 12:00',
+      address: '',
+      addressDetail: '',
+      paymentMethod: '무통장 입금',
+      totalPrice: 0,
+      status: 'pending'
+    });
+  };
 
   // Filtering & Search
   const filteredInquiries = inquiries.filter(item => {
@@ -275,6 +333,23 @@ export const OrderList: React.FC = () => {
           >
             <Download size={16} />
             CSV 내보내기
+          </button>
+
+          {/* Add Manual Order Button */}
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="btn-primary"
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              fontSize: '0.85rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <Clipboard size={16} />
+            수동 주문 추가
           </button>
         </div>
       </div>
@@ -552,6 +627,168 @@ export const OrderList: React.FC = () => {
                     메모 임시 저장
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+      {/* Add Manual Order Modal */}
+      {isAddModalOpen && createPortal(
+        <div 
+          onClick={() => setIsAddModalOpen(false)}
+          style={{
+            position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+            backgroundColor: 'rgba(44, 38, 33, 0.4)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
+            padding: '20px'
+          }}
+        >
+          <div 
+            className="glass-panel animate-fade-in-up" 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '500px', width: '100%', maxHeight: '90vh',
+              borderRadius: '24px', position: 'relative', border: '2px solid var(--border-color)',
+              display: 'flex', flexDirection: 'column', overflow: 'hidden',
+              backgroundColor: '#FFF'
+            }}
+          >
+            {/* Header */}
+            <div style={{ padding: '24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 className="serif-font" style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--color-text-main)' }}>
+                수동 주문 추가
+              </h2>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-sub)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Form Content */}
+            <div className="admin-modal-content" style={{ padding: '24px', overflowY: 'auto' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-sub)' }}>고객명</label>
+                  <input 
+                    type="text" 
+                    value={newOrder.customerName}
+                    onChange={(e) => setNewOrder({...newOrder, customerName: e.target.value})}
+                    placeholder="홍길동"
+                    style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.9rem' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-sub)' }}>연락처</label>
+                  <input 
+                    type="text" 
+                    value={newOrder.phone}
+                    onChange={(e) => setNewOrder({...newOrder, phone: e.target.value})}
+                    placeholder="010-0000-0000"
+                    style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.9rem' }}
+                  />
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', gridColumn: '1 / -1' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-sub)' }}>상차림 종류</label>
+                  <select 
+                    value={newOrder.ritualType}
+                    onChange={(e) => setNewOrder({...newOrder, ritualType: e.target.value})}
+                    style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.9rem' }}
+                  >
+                    <option value="효드림 기본 상차림">효드림 기본 상차림</option>
+                    <option value="효드림 프리미엄 상차림">효드림 프리미엄 상차림</option>
+                    <option value="VIP 맞춤 상차림">VIP 맞춤 상차림</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-sub)' }}>제사 일정</label>
+                  <input 
+                    type="date" 
+                    value={newOrder.date}
+                    onChange={(e) => setNewOrder({...newOrder, date: e.target.value})}
+                    style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.9rem', fontFamily: 'inherit' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-sub)' }}>시간대</label>
+                  <select 
+                    value={newOrder.timeSlot}
+                    onChange={(e) => setNewOrder({...newOrder, timeSlot: e.target.value})}
+                    style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.9rem' }}
+                  >
+                    <option value="오전 10:00 ~ 오후 12:00">오전 10:00 ~ 오후 12:00</option>
+                    <option value="오후 3:00 ~ 오후 5:00">오후 3:00 ~ 오후 5:00</option>
+                    <option value="저녁 7:00 ~ 저녁 9:00">저녁 7:00 ~ 저녁 9:00</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', gridColumn: '1 / -1' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-sub)' }}>배송지 주소</label>
+                  <input 
+                    type="text" 
+                    value={newOrder.address}
+                    onChange={(e) => setNewOrder({...newOrder, address: e.target.value})}
+                    placeholder="서울시 강남구..."
+                    style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.9rem' }}
+                  />
+                  <input 
+                    type="text" 
+                    value={newOrder.addressDetail}
+                    onChange={(e) => setNewOrder({...newOrder, addressDetail: e.target.value})}
+                    placeholder="상세 주소"
+                    style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.9rem' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-sub)' }}>결제 수단</label>
+                  <select 
+                    value={newOrder.paymentMethod}
+                    onChange={(e) => setNewOrder({...newOrder, paymentMethod: e.target.value})}
+                    style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.9rem' }}
+                  >
+                    <option value="무통장 입금">무통장 입금</option>
+                    <option value="카드 결제">카드 결제</option>
+                    <option value="토스페이">토스페이</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-sub)' }}>총 결제 금액</label>
+                  <input 
+                    type="number" 
+                    value={newOrder.totalPrice}
+                    onChange={(e) => setNewOrder({...newOrder, totalPrice: Number(e.target.value)})}
+                    placeholder="250000"
+                    style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.9rem' }}
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
+                <button
+                  onClick={() => setIsAddModalOpen(false)}
+                  style={{
+                    padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border-color)',
+                    backgroundColor: '#FFF', color: 'var(--color-text-main)', fontWeight: 600, cursor: 'pointer'
+                  }}
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleAddNewOrder}
+                  className="btn-primary"
+                  style={{ padding: '10px 20px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  주문 추가
+                </button>
               </div>
             </div>
           </div>
