@@ -19,6 +19,11 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
   const { addInquiry } = useApp();
   const [step, setStep] = useState(1);
   const [showTossModal, setShowTossModal] = useState(false);
+
+  // Auto-scroll to top smoothly whenever the wizard step or the payment modal changes (essential for mobile payments UX)
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [step, showTossModal]);
   
   // Step 2 Fields
   const [date, setDate] = useState('');
