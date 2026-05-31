@@ -25,9 +25,28 @@ export const Reviews: React.FC = () => {
   // Pagination loading state (for Mobile)
   const [visibleMobileCount, setVisibleMobileCount] = useState<number>(10);
 
+  const isMounted = React.useRef(false);
+
   useEffect(() => {
     fetchReviews();
   }, []);
+
+  // Scroll smoothly to PC reviews list top when page number or sort configuration changes
+  useEffect(() => {
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
+    const listTop = document.getElementById('pc-reviews-list-top');
+    if (listTop) {
+      const elementPosition = listTop.getBoundingClientRect().top + window.scrollY;
+      const offsetPosition = elementPosition - 100; // Offset slightly for sticky header
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
+    }
+  }, [currentPage, sortBy, sortOrder]);
 
   const fetchReviews = async () => {
     try {
@@ -311,7 +330,7 @@ export const Reviews: React.FC = () => {
           </div>
 
           {/* Sorting Control Bar & Remaining Reviews list */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div id="pc-reviews-list-top" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
