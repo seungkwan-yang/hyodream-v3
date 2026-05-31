@@ -144,9 +144,9 @@ export const Header: React.FC = () => {
             { id: 'home', label: '홈' },
             { id: 'estimator', label: '상차림' },
             { id: 'menu', label: '상차림 품목 소개' },
-            { id: 'faq', label: '자주 묻는 질문' },
             { id: 'reviews', label: '후기 보기' },
-            { id: 'write-review', label: '후기작성' }
+            { id: 'write-review', label: '후기작성' },
+            { id: 'faq', label: '자주 묻는 질문' }
           ].map(tab => (
             <button
               key={tab.id}
@@ -238,9 +238,9 @@ export const Header: React.FC = () => {
                 { id: 'home', label: '홈' },
                 { id: 'estimator', label: '상차림' },
                 { id: 'menu', label: '상차림 품목 소개' },
-                { id: 'faq', label: '자주 묻는 질문' },
                 { id: 'reviews', label: '후기 보기' },
-                { id: 'write-review', label: '후기작성' }
+                { id: 'write-review', label: '후기작성' },
+                { id: 'faq', label: '자주 묻는 질문' }
               ].map(tab => (
                 <button
                   key={tab.id}
