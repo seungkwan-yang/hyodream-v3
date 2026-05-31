@@ -10,7 +10,7 @@ interface Review {
 }
 
 export const Reviews: React.FC = () => {
-  // 15 high-quality customer reviews with slightly varied ratings and dates for sorting/pagination demonstration
+  // 15 high-quality customer reviews with slightly varied ratings and dates for sorting/pagination/more-loading demonstration
   const reviews: Review[] = [
     {
       name: '이*호 (인천 연수구)',
@@ -119,11 +119,14 @@ export const Reviews: React.FC = () => {
     }
   ];
 
-  // Sorting and Pagination states
+  // Sorting and Pagination states (for PC)
   const [sortBy, setSortBy] = useState<'rating' | 'date'>('rating');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const ITEMS_PER_PAGE = 10;
+
+  // Pagination loading state (for Mobile)
+  const [visibleMobileCount, setVisibleMobileCount] = useState<number>(10);
 
   const handleSort = (field: 'rating' | 'date') => {
     // Reset to page 1 upon changing sorting criteria to avoid out-of-bounds UI confusion
@@ -166,6 +169,9 @@ export const Reviews: React.FC = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
+  // 5. Slice mobile reviews based on mobile paging state
+  const mobilePaginatedReviews = reviews.slice(0, visibleMobileCount);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '56px' }} className="animate-fade-in-up">
       {/* Title area (Shared) */}
@@ -191,7 +197,7 @@ export const Reviews: React.FC = () => {
         </div>
 
         {/* ---------------------------------------------------- */}
-        {/* MOBILE LAYOUT BLOCK: Show all 15 reviews as card grid */}
+        {/* MOBILE LAYOUT BLOCK: Show reviews with "See More" button */}
         {/* ---------------------------------------------------- */}
         <div className="mobile-only-block">
           <div style={{
@@ -199,7 +205,7 @@ export const Reviews: React.FC = () => {
             gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
             gap: '24px'
           }}>
-            {reviews.map((rev, idx) => (
+            {mobilePaginatedReviews.map((rev, idx) => (
               <div key={idx} className="premium-card korean-border-box" style={{
                 padding: '32px 28px',
                 backgroundColor: '#FFFFFF',
@@ -237,6 +243,37 @@ export const Reviews: React.FC = () => {
               </div>
             ))}
           </div>
+
+          {/* Mobile "See More" Button controls */}
+          {visibleMobileCount < reviews.length && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              marginTop: '32px'
+            }}>
+              <button
+                onClick={() => setVisibleMobileCount(prev => prev + 10)}
+                className="btn-secondary pulse-gold"
+                style={{
+                  padding: '14px 28px',
+                  fontSize: '0.88rem',
+                  fontWeight: 700,
+                  borderRadius: '12px',
+                  borderColor: 'var(--color-primary)',
+                  color: 'var(--color-primary)',
+                  cursor: 'pointer',
+                  backgroundColor: '#FFFFFF',
+                  transition: 'var(--transition-smooth)',
+                  width: '100%',
+                  maxWidth: '320px',
+                  justifyContent: 'center',
+                  boxShadow: 'none'
+                }}
+              >
+                후기 더보기 (남은 {reviews.length - visibleMobileCount}개 보기)
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ---------------------------------------------------- */}
