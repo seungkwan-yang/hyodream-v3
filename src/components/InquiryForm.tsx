@@ -64,6 +64,41 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
     return tomorrow.toISOString().split('T')[0];
   };
 
+  // Integrate Kakao Postcode Service for searching verified address
+  const handleAddressSearch = () => {
+    const daum = (window as any).daum;
+    if (daum && daum.Postcode) {
+      new daum.Postcode({
+        oncomplete: (data: any) => {
+          let fullAddress = data.roadAddress || data.address;
+          if (data.buildingName) {
+            fullAddress += ` (${data.buildingName})`;
+          }
+          setAddress(fullAddress);
+          
+          // Clear error if exists
+          if (errors.address) {
+            setErrors(prev => {
+              const copy = { ...prev };
+              delete copy.address;
+              return copy;
+            });
+          }
+          
+          // Shift focus to detail input automatically after selecting address
+          setTimeout(() => {
+            const detailInput = document.getElementById('address-detail-input');
+            if (detailInput) {
+              detailInput.focus();
+            }
+          }, 100);
+        }
+      }).open();
+    } else {
+      alert('우편번호 서비스를 로드할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+    }
+  };
+
   const handleNextStep = () => {
     const newErrors: Record<string, string> = {};
 
@@ -319,21 +354,52 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
                 </label>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ position: 'relative' }}>
-                    <MapPin size={18} style={{
-                      position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)',
-                      color: 'var(--color-text-muted)', pointerEvents: 'none'
-                    }} />
-                    <input
-                      type="text"
-                      placeholder="기본 주소를 입력해 주세요 (인천광역시 부평구 평천로 353...)"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      style={{ paddingLeft: '44px' }}
-                    />
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <div style={{ position: 'relative', flex: 1 }}>
+                      <MapPin size={18} style={{
+                        position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)',
+                        color: 'var(--color-text-muted)', pointerEvents: 'none'
+                      }} />
+                      <input
+                        type="text"
+                        placeholder="우측 '주소 검색' 버튼을 클릭해 주십시오"
+                        value={address}
+                        readOnly
+                        onClick={handleAddressSearch}
+                        style={{ paddingLeft: '44px', cursor: 'pointer', backgroundColor: '#FAF9F6' }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddressSearch}
+                      className="btn-secondary"
+                      style={{
+                        padding: '0 20px',
+                        borderRadius: '10px',
+                        fontWeight: 700,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        borderColor: 'var(--color-primary)',
+                        color: 'var(--color-primary)',
+                        backgroundColor: '#FFFFFF',
+                        whiteSpace: 'nowrap',
+                        transition: 'var(--transition-smooth)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--color-primary)';
+                        e.currentTarget.style.color = '#FFFFFF';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#FFFFFF';
+                        e.currentTarget.style.color = 'var(--color-primary)';
+                      }}
+                    >
+                      주소 검색
+                    </button>
                   </div>
                   
                   <input
+                    id="address-detail-input"
                     type="text"
                     placeholder="상세 주소 (아파트 동/호수 또는 상가 층수 입력)"
                     value={addressDetail}
