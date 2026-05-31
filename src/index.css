@@ -33,9 +33,9 @@
 
 /* Darker focus states inside admin dashboard if needed, still matching theme */
 .admin-theme {
-  --bg-primary: #F0F4F0;
-  --bg-secondary: #E4EBE3;
-  --border-color: #D2DCD0;
+  --bg-primary: #F2F4F7;
+  --bg-secondary: #E6EAF0;
+  --border-color: #CBD5E1;
 }
 
 * {
