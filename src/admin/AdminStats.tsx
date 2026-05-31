@@ -1,26 +1,36 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { TrendingUp, Users, Calendar, ShoppingBag, DollarSign } from 'lucide-react';
 
 export const AdminStats: React.FC = () => {
   const { inquiries } = useApp();
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const filteredInquiries = inquiries.filter(i => {
+    if (!startDate && !endDate) return true;
+    const iDate = i.createdAt ? i.createdAt.split(' ')[0] : i.date;
+    if (startDate && iDate < startDate) return false;
+    if (endDate && iDate > endDate) return false;
+    return true;
+  });
 
   // Computations
-  const totalInquiries = inquiries.length;
-  const pendingCount = inquiries.filter(i => i.status === 'pending').length;
-  const activeProcessing = inquiries.filter(i => i.status === 'approved' || i.status === 'processing').length;
-  const completedCount = inquiries.filter(i => i.status === 'completed').length;
+  const totalInquiries = filteredInquiries.length;
+  const pendingCount = filteredInquiries.filter(i => i.status === 'pending').length;
+  const activeProcessing = filteredInquiries.filter(i => i.status === 'approved' || i.status === 'processing').length;
+  const completedCount = filteredInquiries.filter(i => i.status === 'completed').length;
   
-  const totalRevenue = inquiries
+  const totalRevenue = filteredInquiries
     .filter(i => i.paymentStatus === 'paid' || i.status !== 'pending') // Count paid orders
     .reduce((sum, item) => sum + item.totalPrice, 0);
 
   const conversionRate = totalInquiries > 0 
-    ? Math.round((inquiries.filter(i => i.paymentStatus === 'paid').length / totalInquiries) * 100) 
+    ? Math.round((filteredInquiries.filter(i => i.paymentStatus === 'paid').length / totalInquiries) * 100) 
     : 100;
 
   // Find most popular package
-  const packageCounts = inquiries.reduce((acc, curr) => {
+  const packageCounts = filteredInquiries.reduce((acc, curr) => {
     acc[curr.ritualType] = (acc[curr.ritualType] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
@@ -49,6 +59,67 @@ export const AdminStats: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }} className="animate-fade-in-up">
+      {/* Date Filter */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        backgroundColor: '#FFF',
+        padding: '16px 24px',
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--border-color)',
+        boxShadow: 'var(--shadow-sm)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-main)', fontWeight: 600 }}>
+          <Calendar size={18} />
+          <span>기간 필터:</span>
+        </div>
+        <input 
+          type="date" 
+          value={startDate} 
+          onChange={(e) => setStartDate(e.target.value)}
+          style={{
+            padding: '8px 12px',
+            border: '1px solid var(--border-color)',
+            borderRadius: '8px',
+            outline: 'none',
+            fontSize: '0.9rem',
+            fontFamily: 'inherit'
+          }}
+        />
+        <span style={{ color: 'var(--color-text-muted)' }}>~</span>
+        <input 
+          type="date" 
+          value={endDate} 
+          onChange={(e) => setEndDate(e.target.value)}
+          style={{
+            padding: '8px 12px',
+            border: '1px solid var(--border-color)',
+            borderRadius: '8px',
+            outline: 'none',
+            fontSize: '0.9rem',
+            fontFamily: 'inherit'
+          }}
+        />
+        {(startDate || endDate) && (
+          <button
+            onClick={() => { setStartDate(''); setEndDate(''); }}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: 'var(--bg-secondary)',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              color: 'var(--color-text-sub)'
+            }}
+          >
+            초기화
+          </button>
+        )}
+      </div>
+
       {/* Metrics Row */}
       <div style={{
         display: 'grid',

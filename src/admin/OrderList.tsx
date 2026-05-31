@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
 import type { Inquiry, InquiryStatus } from '../context/AppContext';
-import { Search, Calendar, MapPin, Phone, Eye, Trash2, Clipboard, X, CheckCircle, Clock, Truck, Award } from 'lucide-react';
+import { Search, Calendar, MapPin, Phone, Eye, Trash2, Clipboard, X, CheckCircle, Clock, Truck, Award, Download } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export const OrderList: React.FC = () => {
   const { inquiries, updateInquiryStatus, updateInquiryNotes, deleteInquiry } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [yearMonthFilter, setYearMonthFilter] = useState<string>('all');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>('all');
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
   const [noteText, setNoteText] = useState('');
 
@@ -18,8 +20,62 @@ export const OrderList: React.FC = () => {
                           item.phone.includes(searchTerm) ||
                           item.address.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    
+    // Year/Month logic
+    const createdDate = item.createdAt ? item.createdAt.split(' ')[0] : item.date;
+    const yearMonth = createdDate.slice(0, 7); // YYYY-MM
+    const matchesYearMonth = yearMonthFilter === 'all' || yearMonth === yearMonthFilter;
+
+    // Payment Method logic
+    const resolvedMethod = item.paymentMethod || '무통장 입금 (기본)';
+    let matchesPayment = true;
+    if (paymentMethodFilter !== 'all') {
+      if (paymentMethodFilter === 'toss') matchesPayment = resolvedMethod.includes('토스페이');
+      else if (paymentMethodFilter === 'card') matchesPayment = resolvedMethod.includes('카드');
+      else if (paymentMethodFilter === 'transfer') matchesPayment = resolvedMethod.includes('계좌이체') || resolvedMethod.includes('무통장') || resolvedMethod.includes('은행');
+    }
+
+    return matchesSearch && matchesStatus && matchesYearMonth && matchesPayment;
   });
+
+  // Extract unique Year/Month for dropdown
+  const uniqueYearMonths = Array.from(new Set(
+    inquiries.map(item => {
+      const createdDate = item.createdAt ? item.createdAt.split(' ')[0] : item.date;
+      return createdDate.slice(0, 7);
+    })
+  )).sort().reverse();
+
+  // CSV Export logic
+  const handleExportCSV = () => {
+    const headers = ['주문 번호', '고객명', '연락처', '상차림 종류', '제사 일정', '총 금액', '결제 수단', '진행 상태', '생성일'];
+    const rows = filteredInquiries.map(item => [
+      item.id,
+      item.customerName,
+      item.phone,
+      item.ritualType,
+      `${item.date} ${item.timeSlot}`,
+      item.totalPrice.toString(),
+      item.paymentMethod || '무통장 입금 (기본)',
+      getStatusLabel(item.status),
+      item.createdAt || item.date
+    ]);
+
+    // Build CSV string with BOM for Excel UTF-8 support
+    const csvContent = "\uFEFF" + [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `hyodream_orders_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const handleOpenDetail = (inquiry: Inquiry) => {
     setSelectedInquiry(inquiry);
@@ -139,27 +195,87 @@ export const OrderList: React.FC = () => {
           />
         </div>
 
-        {/* Filter Tabs */}
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto' }}>
-          {['all', 'pending', 'approved', 'processing', 'completed'].map(status => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                border: 'none',
-                cursor: 'pointer',
-                backgroundColor: statusFilter === status ? 'var(--color-primary)' : 'var(--bg-secondary)',
-                color: statusFilter === status ? '#FFF' : 'var(--color-text-sub)',
-                transition: 'var(--transition-smooth)'
-              }}
-            >
-              {status === 'all' ? '전체 내역' : getStatusLabel(status as InquiryStatus)}
-            </button>
-          ))}
+        {/* Filters and Actions */}
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* Year/Month Dropdown */}
+          <select
+            value={yearMonthFilter}
+            onChange={(e) => setYearMonthFilter(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              borderRadius: '8px',
+              border: '1px solid var(--border-color)',
+              fontSize: '0.85rem',
+              outline: 'none',
+              backgroundColor: '#FFF'
+            }}
+          >
+            <option value="all">전체 기간 (년/월)</option>
+            {uniqueYearMonths.map(ym => (
+              <option key={ym} value={ym}>{ym}</option>
+            ))}
+          </select>
+
+          {/* Payment Method Dropdown */}
+          <select
+            value={paymentMethodFilter}
+            onChange={(e) => setPaymentMethodFilter(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              borderRadius: '8px',
+              border: '1px solid var(--border-color)',
+              fontSize: '0.85rem',
+              outline: 'none',
+              backgroundColor: '#FFF'
+            }}
+          >
+            <option value="all">전체 결제수단</option>
+            <option value="toss">토스페이</option>
+            <option value="card">카드결제</option>
+            <option value="transfer">계좌이체/무통장</option>
+          </select>
+
+          {/* Status Filter Dropdown */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              borderRadius: '8px',
+              border: '1px solid var(--border-color)',
+              fontSize: '0.85rem',
+              outline: 'none',
+              backgroundColor: '#FFF'
+            }}
+          >
+            <option value="all">전체 상태</option>
+            <option value="pending">접수/입금대기</option>
+            <option value="approved">결제완료</option>
+            <option value="processing">배송준비</option>
+            <option value="completed">배송완료</option>
+          </select>
+
+          {/* Export Button */}
+          <button
+            onClick={handleExportCSV}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              border: '1px solid var(--color-primary)',
+              cursor: 'pointer',
+              backgroundColor: '#FFF',
+              color: 'var(--color-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'var(--transition-smooth)'
+            }}
+          >
+            <Download size={16} />
+            CSV 내보내기
+          </button>
         </div>
       </div>
 
