@@ -31,6 +31,21 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
   const [phone, setPhone] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
   
+  // Helper: Format phone numbers with hyphens automatically (e.g. 01012345678 -> 010-1234-5678)
+  const formatKoreanPhoneNumber = (value: string) => {
+    const digits = value.replace(/[^0-9]/g, '');
+    const cleanDigits = digits.slice(0, 11);
+    if (cleanDigits.length <= 3) {
+      return cleanDigits;
+    } else if (cleanDigits.length <= 6) {
+      return `${cleanDigits.slice(0, 3)}-${cleanDigits.slice(3)}`;
+    } else if (cleanDigits.length <= 10) {
+      return `${cleanDigits.slice(0, 3)}-${cleanDigits.slice(3, 6)}-${cleanDigits.slice(6)}`;
+    } else {
+      return `${cleanDigits.slice(0, 3)}-${cleanDigits.slice(3, 7)}-${cleanDigits.slice(7)}`;
+    }
+  };
+
   // Validation Errors
   const [errors, setErrors] = useState<Record<string, string>>({});
   
@@ -59,8 +74,8 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
 
     if (step === 3) {
       if (!customerName.trim()) newErrors.customerName = '주문자(신청인) 성함을 입력해 주세요.';
-      if (!phone.trim() || !/^\d{9,11}$/.test(phone)) {
-        newErrors.phone = '올바른 연락처 형식(예: 01012345678 - 숫자만)으로 입력해 주세요.';
+      if (!phone.trim() || !/^\d{2,3}-\d{3,4}-\d{4}$/.test(phone)) {
+        newErrors.phone = '올바른 연락처 형식(예: 010-1234-5678)으로 입력해 주세요.';
       }
       
       if (Object.keys(newErrors).length > 0) {
@@ -373,9 +388,9 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
                 <input
                   type="tel"
                   inputMode="numeric"
-                  placeholder="01012345678 (하이픈 '-' 제외 숫자만)"
+                  placeholder="010-1234-5678 (숫자 키패드 지원, 자동 기입)"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ''))}
+                  onChange={(e) => setPhone(formatKoreanPhoneNumber(e.target.value))}
                 />
                 {errors.phone && <span style={{ color: 'var(--color-rose)', fontSize: '0.75rem', fontWeight: 600, display: 'block', marginTop: '6px' }}>{errors.phone}</span>}
               </div>

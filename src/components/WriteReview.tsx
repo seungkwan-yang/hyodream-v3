@@ -32,6 +32,21 @@ export const WriteReview: React.FC = () => {
   // Helper: Normalize phone numbers for robust matching
   const normalizePhone = (num: string) => num.replace(/[^0-9]/g, '');
 
+  // Helper: Format phone numbers with hyphens automatically (e.g. 01012345678 -> 010-1234-5678)
+  const formatKoreanPhoneNumber = (value: string) => {
+    const digits = value.replace(/[^0-9]/g, '');
+    const cleanDigits = digits.slice(0, 11);
+    if (cleanDigits.length <= 3) {
+      return cleanDigits;
+    } else if (cleanDigits.length <= 6) {
+      return `${cleanDigits.slice(0, 3)}-${cleanDigits.slice(3)}`;
+    } else if (cleanDigits.length <= 10) {
+      return `${cleanDigits.slice(0, 3)}-${cleanDigits.slice(3, 6)}-${cleanDigits.slice(6)}`;
+    } else {
+      return `${cleanDigits.slice(0, 3)}-${cleanDigits.slice(3, 7)}-${cleanDigits.slice(7)}`;
+    }
+  };
+
   // Helper: Mask name (e.g. 공유 -> 공*유, 김철 -> 김*, 남궁철수 -> 남*철수)
   const maskName = (fullName: string) => {
     if (!fullName) return '';
@@ -283,8 +298,8 @@ export const WriteReview: React.FC = () => {
                 type="tel"
                 inputMode="numeric"
                 value={custPhone}
-                onChange={(e) => setCustPhone(e.target.value.replace(/[^0-9]/g, ''))}
-                placeholder="예: 01056781234 (하이픈 '-' 제외 숫자만)"
+                onChange={(e) => setCustPhone(formatKoreanPhoneNumber(e.target.value))}
+                placeholder="예: 010-5678-1234 (숫자 키패드 지원, 자동 기입)"
                 style={{
                   width: '100%',
                   padding: '14px 18px',
