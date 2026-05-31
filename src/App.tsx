@@ -34,7 +34,14 @@ const AppContent: React.FC = () => {
   const renderCustomerTab = () => {
     switch (customerTab) {
       case 'home':
-        return <HeroSection />;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '60px' }}>
+            <HeroSection />
+            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '40px' }}>
+              <Reviews limit={3} />
+            </div>
+          </div>
+        );
       case 'estimator':
         if (estimatorConfig) {
           return (

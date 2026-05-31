@@ -12,7 +12,11 @@ interface Review {
   imageUrl?: string;
 }
 
-export const Reviews: React.FC = () => {
+interface ReviewsProps {
+  limit?: number; // If provided, show only the latest N reviews in preview mode
+}
+
+export const Reviews: React.FC<ReviewsProps> = ({ limit }) => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -105,6 +109,64 @@ export const Reviews: React.FC = () => {
 
   // 5. Slice mobile reviews based on mobile paging state
   const mobilePaginatedReviews = reviews.slice(0, visibleMobileCount);
+
+
+  // Latest N reviews sorted by date (for preview/home mode)
+  const latestReviews = [...reviews]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, limit ?? reviews.length);
+
+  // ── Preview mode: compact 3-card grid, no pagination or sort controls ──
+  if (limit !== undefined) {
+    if (loading) {
+      return (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '160px' }}>
+          <div style={{ width: '32px', height: '32px', border: '3px solid var(--border-color)', borderTopColor: 'var(--color-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        </div>
+      );
+    }
+    return (
+      <div className="animate-fade-in-up">
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(197, 155, 39, 0.1)', padding: '6px 14px', borderRadius: '20px', color: 'var(--color-gold)', fontSize: '0.8rem', fontWeight: 700, marginBottom: '12px' }}>
+            <Heart size={14} style={{ fill: 'var(--color-gold)' }} />
+            최근 고객 후기
+          </div>
+          <h2 className="serif-font" style={{ fontSize: '1.7rem', fontWeight: 800 }}>효드림을 이용하신 가족들의 후기</h2>
+          <div className="korean-divider" />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+          {latestReviews.map((rev, idx) => (
+            <div key={idx} className="premium-card korean-border-box" style={{ padding: '28px 24px', backgroundColor: '#FFFFFF', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '240px', border: '1.5px solid var(--color-gold)' }}>
+              <div>
+                <div style={{ display: 'flex', gap: '3px', color: 'var(--color-gold)', marginBottom: '12px' }}>
+                  {Array.from({ length: rev.rating }).map((_, i) => (
+                    <Star key={i} size={15} style={{ fill: 'var(--color-gold)' }} />
+                  ))}
+                </div>
+                {rev.imageUrl && (
+                  <div style={{ width: '100%', height: '130px', borderRadius: '10px', overflow: 'hidden', marginBottom: '12px', border: '1px solid var(--border-color)' }}>
+                    <img src={rev.imageUrl} alt="포토 후기" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                )}
+                {rev.title && (
+                  <h4 style={{ fontSize: '0.93rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '6px', lineHeight: 1.4 }}>{rev.title}</h4>
+                )}
+                <p style={{ fontSize: '0.86rem', color: 'var(--color-text-sub)', lineHeight: 1.6, fontStyle: 'italic' }}>"{rev.content}"</p>
+              </div>
+              <div style={{ marginTop: '20px', paddingTop: '14px', borderTop: '1px dashed var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
+                <div>
+                  <strong style={{ display: 'block', color: 'var(--color-text-main)' }}>{rev.name}</strong>
+                  <span style={{ color: 'var(--color-text-muted)', fontSize: '0.73rem' }}>주문상품: {rev.packageType}</span>
+                </div>
+                <span style={{ color: 'var(--color-text-muted)' }}>{rev.date}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
