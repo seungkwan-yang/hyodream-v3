@@ -12,7 +12,7 @@ import { AdminDashboard } from './admin/AdminDashboard';
 import { Phone, MapPin } from 'lucide-react';
 
 const AppContent: React.FC = () => {
-  const { viewMode, customerTab, setCustomerTab } = useApp();
+  const { viewMode, customerTab } = useApp();
   
   // Custom Estimator Config selected to proceed to Form
   const [estimatorConfig, setEstimatorConfig] = useState<any>(null);
@@ -105,14 +105,10 @@ const AppContent: React.FC = () => {
             <div style={{
               maxWidth: '1200px',
               margin: '0 auto',
-              display: 'grid',
-              gridTemplateColumns: '1.5fr 1fr',
-              gap: '40px',
               paddingBottom: '32px',
               borderBottom: '1px solid #3C352E'
-            }} className="footer-grid">
-              
-              {/* Col 1: Branding and contacts */}
+            }}>
+              {/* Branding and contacts */}
               <div>
                 <h4 className="serif-font" style={{ color: '#FDFBF7', fontSize: '1.15rem', fontWeight: 700, marginBottom: '16px' }}>
                   (주) 효드림 제사 대행 서비스
@@ -131,16 +127,6 @@ const AppContent: React.FC = () => {
                   </span>
                 </div>
               </div>
-
-              {/* Col 2: Site maps */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <h5 style={{ color: '#FDFBF7', fontWeight: 700, fontSize: '0.9rem', marginBottom: '6px' }}>바로가기 서비스</h5>
-                <span onClick={() => { setCustomerTab('home'); window.scrollTo({top:0, behavior:'smooth'}); }} style={{ cursor: 'pointer', transition: '0.2s' }} onMouseEnter={(e)=>e.currentTarget.style.color='#FFF'} onMouseLeave={(e)=>e.currentTarget.style.color='#A89F95'}>효드림 브랜드 스토리</span>
-                <span onClick={() => { setCustomerTab('estimator'); window.scrollTo({top:0, behavior:'smooth'}); }} style={{ cursor: 'pointer', transition: '0.2s' }} onMouseEnter={(e)=>e.currentTarget.style.color='#FFF'} onMouseLeave={(e)=>e.currentTarget.style.color='#A89F95'}>실시간 상차림 주문 및 맞춤 설정</span>
-                <span onClick={() => { setCustomerTab('menu'); window.scrollTo({top:0, behavior:'smooth'}); }} style={{ cursor: 'pointer', transition: '0.2s' }} onMouseEnter={(e)=>e.currentTarget.style.color='#FFF'} onMouseLeave={(e)=>e.currentTarget.style.color='#A89F95'}>가래떡, 명품동태전 품목 상세 갤러리</span>
-                <span onClick={() => { setCustomerTab('faq'); window.scrollTo({top:0, behavior:'smooth'}); }} style={{ cursor: 'pointer', transition: '0.2s' }} onMouseEnter={(e)=>e.currentTarget.style.color='#FFF'} onMouseLeave={(e)=>e.currentTarget.style.color='#A89F95'}>이용 고객 안심 포토 후기</span>
-              </div>
-
             </div>
 
             {/* Centered Business & Copyright Information matching user image exactly */}
