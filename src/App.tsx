@@ -99,14 +99,17 @@ const AppContent: React.FC = () => {
             color: '#A89F95',
             borderTop: '1.5px solid #3C352E',
             fontSize: '0.85rem',
-            lineHeight: 1.8
+            lineHeight: 1.8,
+            padding: '40px 20px'
           }}>
             <div style={{
               maxWidth: '1200px',
               margin: '0 auto',
               display: 'grid',
-              gridTemplateColumns: '1.5fr 1fr 1fr',
+              gridTemplateColumns: '1.5fr 1fr',
               gap: '40px',
+              paddingBottom: '32px',
+              borderBottom: '1px solid #3C352E'
             }} className="footer-grid">
               
               {/* Col 1: Branding and contacts */}
@@ -124,7 +127,7 @@ const AppContent: React.FC = () => {
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <MapPin size={14} style={{ color: 'var(--color-gold)' }} />
-                    본사 직영 시설: 인천광역시 부평구 평천로 353 1층 효드림 빌딩
+                    본사 직영 시설: 인천광역시 부평구 평천로 353 1층
                   </span>
                 </div>
               </div>
@@ -138,32 +141,29 @@ const AppContent: React.FC = () => {
                 <span onClick={() => { setCustomerTab('faq'); window.scrollTo({top:0, behavior:'smooth'}); }} style={{ cursor: 'pointer', transition: '0.2s' }} onMouseEnter={(e)=>e.currentTarget.style.color='#FFF'} onMouseLeave={(e)=>e.currentTarget.style.color='#A89F95'}>이용 고객 안심 포토 후기</span>
               </div>
 
-              {/* Col 3: Legal compliance numbers */}
-              <div>
-                <h5 style={{ color: '#FDFBF7', fontWeight: 700, fontSize: '0.9rem', marginBottom: '12px' }}>위생 및 사업 정보</h5>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', color: '#887E75', fontSize: '0.8rem' }}>
-                  <span>사업자등록번호: 131-86-63412 | 통신판매업신고: 제 2026-인천부평-0428호</span>
-                  <span>식품위생영업허가: 제 2026-018264호 | HACCP 직영 인증 시설 승인</span>
-                  <span>대표이사: 김철수 | 개인정보관리책임자: 박영희</span>
-                  <span style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-gold)' }}>
-                    <Shield size={14} /> 안심 직배송 차량 100% 현대화 종합보험 가입
-                  </span>
-                </div>
-              </div>
-
             </div>
 
-            {/* Copyright */}
+            {/* Centered Business & Copyright Information matching user image exactly */}
             <div style={{
               maxWidth: '1200px',
-              margin: '40px auto 0 auto',
-              borderTop: '1px solid #3C352E',
-              paddingTop: '24px',
+              margin: '24px auto 0 auto',
               textAlign: 'center',
-              fontSize: '0.75rem',
-              color: '#887E75'
+              fontSize: '0.8rem',
+              color: '#887E75',
+              lineHeight: 1.8
             }}>
-              Copyright © 2026 HyoDream Inc. All Rights Reserved. 본 사이트의 맞춤 상차림 주문 방식은 고유 지식재산권으로 보호됩니다.
+              <div style={{ marginBottom: '6px' }}>
+                주소:인천광역시 부평구 평천로 353 1층 | 사업자등록번호 : 157-26-00529 <a href="https://www.ftc.go.kr/bizCommPop.do?wrkr_no=1572600529" target="_blank" rel="noopener noreferrer" style={{ color: '#A89F95', textDecoration: 'none', backgroundColor: '#554A42', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', marginLeft: '6px', display: 'inline-block', fontWeight: 600, transition: '0.2s' }} onMouseEnter={(e)=>e.currentTarget.style.backgroundColor='#6C5E55'} onMouseLeave={(e)=>e.currentTarget.style.backgroundColor='#554A42'}>사업자정보확인</a>
+              </div>
+              <div style={{ marginBottom: '6px' }}>
+                통신판매업신고번호 : 2018-인천부평-0718호 | 개인정보관리자 : 김성기 | 대표 : 김성기 | 상호명 : 효드림
+              </div>
+              <div style={{ marginBottom: '20px' }}>
+                전화번호 : 1600-6341 | 이메일 : hoydream1@gmail.com
+              </div>
+              <div style={{ fontWeight: 700, color: '#A89F95', fontSize: '0.85rem', marginTop: '16px' }}>
+                Copyright@효드림.com Allright right reserved.
+              </div>
             </div>
           </footer>
         </>
