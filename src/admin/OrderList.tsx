@@ -342,16 +342,15 @@ export const OrderList: React.FC = () => {
                           onClick={() => handleOpenDetail(item)}
                           title="상세 보기"
                           style={{
-                            width: 'auto', padding: '0 12px', height: '32px', border: '1px solid var(--border-color)',
+                            width: '32px', height: '32px', border: '1px solid var(--border-color)',
                             borderRadius: '6px', cursor: 'pointer', backgroundColor: '#FFF',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
                             color: 'var(--color-text-sub)', transition: 'var(--transition-smooth)'
                           }}
                           onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-primary)'; e.currentTarget.style.borderColor = 'var(--color-primary)'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-sub)'; e.currentTarget.style.borderColor = 'var(--border-color)'; }}
                         >
                           <Edit3 size={15} />
-                          <span style={{ fontSize: '0.8rem' }}>관리</span>
                         </button>
                         <button
                           onClick={() => handleDelete(item.id)}
