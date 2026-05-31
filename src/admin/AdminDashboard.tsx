@@ -83,23 +83,9 @@ export const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <div style={{
-      display: 'flex',
-      minHeight: 'calc(100vh - 80px)',
-      backgroundColor: 'var(--bg-secondary)',
-      transition: 'var(--transition-smooth)',
-    }} className="admin-theme">
+    <div className="admin-theme admin-theme-container">
       {/* Admin Sidebar Navigation */}
-      <aside className="glass-panel" style={{
-        width: '260px',
-        padding: '32px 16px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '24px',
-        borderRight: '1px solid var(--border-color)',
-        backgroundColor: '#FFFFFF',
-        flexShrink: 0
-      }}>
+      <aside className="glass-panel admin-sidebar">
         {/* Branding header inside sidebar */}
         <div style={{ padding: '0 12px 12px 12px', borderBottom: '1px solid var(--border-color)' }}>
           <h2 className="serif-font" style={{ fontSize: '1.25rem', color: 'var(--color-primary)', fontWeight: 700 }}>
@@ -204,14 +190,9 @@ export const AdminDashboard: React.FC = () => {
       </aside>
 
       {/* Main Workspace Frame */}
-      <main style={{
-        flex: 1,
-        padding: '36px 40px',
-        overflowY: 'auto',
-        maxHeight: 'calc(100vh - 80px)'
-      }}>
+      <main className="admin-main-content">
         {/* Page Title Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+        <div className="admin-page-header">
           <div>
             <h1 className="serif-font" style={{ fontSize: '1.6rem', fontWeight: 700 }}>
               {adminTab === 'dashboard' && '실시간 현황판 (Overview)'}

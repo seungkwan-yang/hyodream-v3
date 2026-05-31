@@ -312,12 +312,7 @@ export const OrderList: React.FC = () => {
             </button>
 
             {/* Scrollable container for modal contents */}
-            <div style={{
-              overflowY: 'auto',
-              padding: '32px',
-              paddingTop: '40px', // slightly offset for the sticky close button
-              flex: 1
-            }}>
+            <div className="admin-modal-content">
               {/* Traditional Receipt Frame */}
               <div style={{
                 backgroundColor: '#FAF7EF', border: '1px dashed var(--border-color)',

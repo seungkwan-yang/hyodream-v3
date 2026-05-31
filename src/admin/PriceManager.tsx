@@ -642,7 +642,7 @@ export const PriceManager: React.FC = () => {
                   marginBottom: '24px'
                 }}>
                   <form onSubmit={handleAddBaseMenuSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '12px' }}>
+                    <div className="responsive-form-grid-1-2">
                       <div>
                         <label style={{ fontSize: '0.75rem', fontWeight: 700, display: 'block', marginBottom: '4px' }}>상차림 이름 *</label>
                         <input
@@ -668,7 +668,7 @@ export const PriceManager: React.FC = () => {
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '12px' }}>
+                    <div className="responsive-form-grid-1-2">
                       <div>
                         <label style={{ fontSize: '0.75rem', fontWeight: 700, display: 'block', marginBottom: '4px' }}>태그 (쉼표로 구분)</label>
                         <input
@@ -732,7 +732,7 @@ export const PriceManager: React.FC = () => {
                     {editingBaseId === menu.id ? (
                       /* Base Menu Inline Editor */
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }} className="animate-fade-in-up">
-                        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '12px' }}>
+                        <div className="responsive-form-grid-1-2">
                           <div>
                             <label style={{ fontSize: '0.7rem', fontWeight: 700, display: 'block', marginBottom: '2px' }}>상차림 이름</label>
                             <input
@@ -755,7 +755,7 @@ export const PriceManager: React.FC = () => {
                           </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '12px' }}>
+                        <div className="responsive-form-grid-1-2">
                           <div>
                             <label style={{ fontSize: '0.7rem', fontWeight: 700, display: 'block', marginBottom: '2px' }}>태그 (쉼표 구분)</label>
                             <input
@@ -1034,7 +1034,7 @@ export const PriceManager: React.FC = () => {
                       />
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div className="responsive-form-grid-1-1">
                       <div>
                         <label style={{ fontSize: '0.75rem', fontWeight: 700, display: 'block', marginBottom: '4px' }}>유형 선택 *</label>
                         <select
@@ -1157,7 +1157,7 @@ export const PriceManager: React.FC = () => {
                             style={{ fontSize: '0.8rem', padding: '6px' }}
                           />
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        <div className="responsive-form-grid-1-1">
                           <div>
                             <label style={{ fontSize: '0.7rem', fontWeight: 700, display: 'block', marginBottom: '2px' }}>유형</label>
                             <select
