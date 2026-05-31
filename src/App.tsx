@@ -8,6 +8,7 @@ import { MenuCatalog } from './components/MenuCatalog';
 import { FAQ } from './components/FAQ';
 import { Reviews } from './components/Reviews';
 import { WriteReview } from './components/WriteReview';
+import { FloatingCS } from './components/FloatingCS';
 import { AdminDashboard } from './admin/AdminDashboard';
 import { Phone, MapPin } from 'lucide-react';
 
@@ -149,6 +150,7 @@ const AppContent: React.FC = () => {
               </div>
             </div>
           </footer>
+          <FloatingCS />
         </>
       )}
     </div>
