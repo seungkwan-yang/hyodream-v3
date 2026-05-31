@@ -833,5 +833,33 @@ input:focus, select:focus, textarea:focus {
   }
 }
 
+/* PC vs Mobile Toggle Blocks */
+@media (max-width: 768px) {
+  .pc-only-block {
+    display: none !important;
+  }
+  .mobile-only-block {
+    display: block !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .pc-only-block {
+    display: block !important;
+  }
+  .mobile-only-block {
+    display: none !important;
+  }
+}
+
+/* Elegant Table and List Hover Transitions */
+.table-row-hover {
+  transition: var(--transition-smooth);
+}
+.table-row-hover:hover {
+  background-color: var(--color-primary-fade) !important;
+}
+
+
 
 

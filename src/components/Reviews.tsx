@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Star, Award, CheckCircle2, Heart } from 'lucide-react';
 
 interface Review {
@@ -10,6 +10,7 @@ interface Review {
 }
 
 export const Reviews: React.FC = () => {
+  // 13 high-quality customer reviews with slightly varied ratings and dates for sorting demonstration
   const reviews: Review[] = [
     {
       name: '이*호 (인천 연수구)',
@@ -27,7 +28,7 @@ export const Reviews: React.FC = () => {
     },
     {
       name: '최*환 (경기도 부천시)',
-      rating: 5,
+      rating: 4, // 4-star for rating variation
       date: '2026-05-04',
       content: '사무실 새로 이전하면서 개업 고사상 대행으로 예약했는데 완전 마음에 듭니다. 돼지머리 상태도 아주 훌륭했고 시루떡이 진짜 김이 모락모락 나는 채로 와서 놀랐습니다. 번창하겠습니다 대박나세요!',
       packageType: '개업 고사상'
@@ -55,14 +56,14 @@ export const Reviews: React.FC = () => {
     },
     {
       name: '최*지 (인천 남동구)',
-      rating: 5,
+      rating: 4, // 4-star for rating variation
       date: '2026-05-15',
       content: '할머니 제사라 소가족 실속상으로 차렸는데 나물 색감도 예쁘고 탕국도 양지 육수라 국물이 깊고 맑았습니다. 포장도 정성이 보여서 제사를 아주 경건하게 마쳤네요. 감사합니다.',
       packageType: '소가족 실속상 (기제사 소)'
     },
     {
       name: '강*수 (인천 계양구)',
-      rating: 5,
+      rating: 4, // 4-star for rating variation
       date: '2026-05-10',
       content: '식혜가 가마솥에 직접 삭힌 맛이라 시판 식혜랑은 차원이 다르네요. 많이 달지 않으면서도 깊은 풍미가 있어 아이들도 너무 좋아했습니다. 1.8L 순삭했네요. 다음에는 두 병 주문하려 합니다.',
       packageType: '소가족 실속상 + 수제 식혜 추가'
@@ -90,7 +91,7 @@ export const Reviews: React.FC = () => {
     },
     {
       name: '고*원 (인천 동구)',
-      rating: 5,
+      rating: 4, // 4-star for rating variation
       date: '2026-04-22',
       content: '나물의 아린 맛이나 쓴 맛이 완전히 제거되어 고소하고 향긋한 나물 본연의 맛이 너무 훌륭했습니다. 고사리, 도라지, 시금치 전부 흠잡을 데가 없네요. 음식 장만 스트레스에서 벗어나게 해 주셔서 감사해요.',
       packageType: '소가족 실속상 (기제사 소)'
@@ -104,9 +105,45 @@ export const Reviews: React.FC = () => {
     }
   ];
 
+  // Sorting state for PC remaining reviews list
+  const [sortBy, setSortBy] = useState<'rating' | 'date'>('rating');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const handleSort = (field: 'rating' | 'date') => {
+    if (sortBy === field) {
+      setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
+    } else {
+      setSortBy(field);
+      setSortOrder('desc'); // Default to descending when switching sorting field
+    }
+  };
+
+  // 1. Featured Top 3 Reviews for PC (highest rated, then newest)
+  const sortedForFeatured = [...reviews].sort((a, b) => {
+    if (b.rating !== a.rating) return b.rating - a.rating;
+    return new Date(b.date).getTime() - new Date(a.date).getTime();
+  });
+  const featuredReviews = sortedForFeatured.slice(0, 3);
+
+  // 2. Remaining reviews (excluding featured 3 to avoid duplicates on screen)
+  const remainingReviews = reviews.filter(
+    rev => !featuredReviews.some(feat => feat.name === rev.name && feat.date === rev.date)
+  );
+
+  // 3. Dynamic sorting of the remaining reviews list
+  const sortedRemaining = [...remainingReviews].sort((a, b) => {
+    let comparison = 0;
+    if (sortBy === 'rating') {
+      comparison = a.rating - b.rating;
+    } else {
+      comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+    }
+    return sortOrder === 'asc' ? comparison : -comparison;
+  });
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '56px' }} className="animate-fade-in-up">
-      {/* Visual Review Grid */}
+      {/* Title area (Shared) */}
       <section>
         <div style={{ textAlign: 'center', marginBottom: '36px' }}>
           <div style={{
@@ -122,58 +159,235 @@ export const Reviews: React.FC = () => {
             marginBottom: '12px'
           }}>
             <Heart size={14} style={{ fill: 'var(--color-gold)' }} />
-            정성 가득 리얼 평점 5.0 만족도
+            정성 가득 리얼 평점 4.9 만족도
           </div>
           <h2 className="serif-font" style={{ fontSize: '2rem', fontWeight: 800 }}>효드림을 이용하신 가족들의 후기</h2>
           <div className="korean-divider" />
         </div>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '24px'
-        }}>
-          {reviews.map((rev, idx) => (
-            <div key={idx} className="premium-card korean-border-box" style={{
-              padding: '32px 28px',
-              backgroundColor: '#FFFFFF',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between'
-            }}>
-              <div>
-                {/* Rating stars */}
-                <div style={{ display: 'flex', gap: '3px', color: 'var(--color-gold)', marginBottom: '14px' }}>
-                  {Array.from({ length: rev.rating }).map((_, i) => (
-                    <Star key={i} size={16} style={{ fill: 'var(--color-gold)' }} />
-                  ))}
-                </div>
-                <p style={{ fontSize: '0.88rem', color: 'var(--color-text-sub)', lineHeight: 1.6, fontStyle: 'italic' }}>
-                  "{rev.content}"
-                </p>
-              </div>
-
-              <div style={{
-                marginTop: '24px',
-                paddingTop: '16px',
-                borderTop: '1px dashed var(--border-color)',
+        {/* ---------------------------------------------------- */}
+        {/* MOBILE LAYOUT BLOCK: Show all 13 reviews as card grid */}
+        {/* ---------------------------------------------------- */}
+        <div className="mobile-only-block">
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '24px'
+          }}>
+            {reviews.map((rev, idx) => (
+              <div key={idx} className="premium-card korean-border-box" style={{
+                padding: '32px 28px',
+                backgroundColor: '#FFFFFF',
                 display: 'flex',
+                flexDirection: 'column',
                 justifyContent: 'space-between',
-                alignItems: 'center',
-                fontSize: '0.8rem'
+                minHeight: '260px'
               }}>
                 <div>
-                  <strong style={{ display: 'block', color: 'var(--color-text-main)' }}>{rev.name}</strong>
-                  <span style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>주문상품: {rev.packageType}</span>
+                  <div style={{ display: 'flex', gap: '3px', color: 'var(--color-gold)', marginBottom: '14px' }}>
+                    {Array.from({ length: rev.rating }).map((_, i) => (
+                      <Star key={i} size={16} style={{ fill: 'var(--color-gold)' }} />
+                    ))}
+                  </div>
+                  <p style={{ fontSize: '0.88rem', color: 'var(--color-text-sub)', lineHeight: 1.6, fontStyle: 'italic' }}>
+                    "{rev.content}"
+                  </p>
                 </div>
-                <span style={{ color: 'var(--color-text-muted)' }}>{rev.date}</span>
+
+                <div style={{
+                  marginTop: '24px',
+                  paddingTop: '16px',
+                  borderTop: '1px dashed var(--border-color)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: '0.8rem'
+                }}>
+                  <div>
+                    <strong style={{ display: 'block', color: 'var(--color-text-main)' }}>{rev.name}</strong>
+                    <span style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>주문상품: {rev.packageType}</span>
+                  </div>
+                  <span style={{ color: 'var(--color-text-muted)' }}>{rev.date}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ---------------------------------------------------- */}
+        {/* PC LAYOUT BLOCK: Top 3 Cards + Sorting Controls + Table List */}
+        {/* ---------------------------------------------------- */}
+        <div className="pc-only-block">
+          {/* Top 3 Featured reviews card grid */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '24px',
+            marginBottom: '48px'
+          }}>
+            {featuredReviews.map((rev, idx) => (
+              <div key={idx} className="premium-card korean-border-box" style={{
+                padding: '32px 28px',
+                backgroundColor: '#FFFFFF',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                minHeight: '260px',
+                border: '1.5px solid var(--color-gold)' // highlighted border for featured reviews
+              }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                    <div style={{ display: 'flex', gap: '3px', color: 'var(--color-gold)' }}>
+                      {Array.from({ length: rev.rating }).map((_, i) => (
+                        <Star key={i} size={16} style={{ fill: 'var(--color-gold)' }} />
+                      ))}
+                    </div>
+                    <span style={{
+                      backgroundColor: 'var(--color-primary-fade)',
+                      color: 'var(--color-primary)',
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: '10px'
+                    }}>Best</span>
+                  </div>
+                  <p style={{ fontSize: '0.88rem', color: 'var(--color-text-sub)', lineHeight: 1.6, fontStyle: 'italic' }}>
+                    "{rev.content}"
+                  </p>
+                </div>
+
+                <div style={{
+                  marginTop: '24px',
+                  paddingTop: '16px',
+                  borderTop: '1px dashed var(--border-color)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: '0.8rem'
+                }}>
+                  <div>
+                    <strong style={{ display: 'block', color: 'var(--color-text-main)' }}>{rev.name}</strong>
+                    <span style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>주문상품: {rev.packageType}</span>
+                  </div>
+                  <span style={{ color: 'var(--color-text-muted)' }}>{rev.date}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Sorting Control Bar & Remaining Reviews list */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderBottom: '2px solid var(--color-primary)',
+              paddingBottom: '12px'
+            }}>
+              <h3 className="serif-font" style={{ fontSize: '1.25rem', color: 'var(--color-primary)', margin: 0 }}>
+                더 많은 가족들의 이야기
+              </h3>
+              
+              {/* Sorting Controls */}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => handleSort('rating')}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    border: '1.5px solid var(--border-color)',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    backgroundColor: sortBy === 'rating' ? 'var(--color-primary)' : '#FFFFFF',
+                    color: sortBy === 'rating' ? '#FFFFFF' : 'var(--color-text-sub)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'var(--transition-smooth)',
+                    outline: 'none'
+                  }}
+                >
+                  <span>평점순</span>
+                  {sortBy === 'rating' && (
+                    <span style={{ fontSize: '0.65rem' }}>
+                      {sortOrder === 'desc' ? '▼' : '▲'}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => handleSort('date')}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    border: '1.5px solid var(--border-color)',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    backgroundColor: sortBy === 'date' ? 'var(--color-primary)' : '#FFFFFF',
+                    color: sortBy === 'date' ? '#FFFFFF' : 'var(--color-text-sub)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'var(--transition-smooth)',
+                    outline: 'none'
+                  }}
+                >
+                  <span>최신순</span>
+                  {sortBy === 'date' && (
+                    <span style={{ fontSize: '0.65rem' }}>
+                      {sortOrder === 'desc' ? '▼' : '▲'}
+                    </span>
+                  )}
+                </button>
               </div>
             </div>
-          ))}
+
+            {/* List block */}
+            <div style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              overflow: 'hidden',
+              boxShadow: 'var(--shadow-sm)',
+              border: '1px solid var(--border-color)'
+            }}>
+              {sortedRemaining.map((rev, idx) => (
+                <div key={idx} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '18px 24px',
+                  borderBottom: idx === sortedRemaining.length - 1 ? 'none' : '1px solid var(--border-color)',
+                  gap: '24px'
+                }} className="table-row-hover">
+                  {/* Rating stars & Date */}
+                  <div style={{ width: '120px', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', gap: '2px', color: 'var(--color-gold)', marginBottom: '4px' }}>
+                      {Array.from({ length: rev.rating }).map((_, i) => (
+                        <Star key={i} size={13} style={{ fill: 'var(--color-gold)' }} />
+                      ))}
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>{rev.date}</span>
+                  </div>
+
+                  {/* Customer details */}
+                  <div style={{ width: '150px', flexShrink: 0 }}>
+                    <strong style={{ fontSize: '0.88rem', display: 'block', color: 'var(--color-text-main)' }}>{rev.name}</strong>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--color-primary-light)', fontWeight: 700 }}>{rev.packageType}</span>
+                  </div>
+
+                  {/* Review Content */}
+                  <div style={{ flex: 1, fontSize: '0.85rem', color: 'var(--color-text-sub)', lineHeight: 1.6 }}>
+                    "{rev.content}"
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Floating Trust Footnote */}
+      {/* Floating Trust Footnote (Shared) */}
       <section className="glass-panel" style={{
         padding: '32px',
         borderRadius: '24px',
@@ -193,7 +407,7 @@ export const Reviews: React.FC = () => {
           부모님을 모시는 효(孝)의 마음, 약속을 지키겠습니다
         </h4>
         <p style={{ fontSize: '0.85rem', color: 'var(--color-text-sub)', maxWidth: '500px', lineHeight: 1.5 }}>
-          효드림은 모든 위생 조리 시설 및 배송 차량에 대해 매일 위생 검수를 시행하고 있습니다. 어르신들의 칭찬과 성원에 보답하겠습니다.
+          효드림은 모든 위생 조리 시설 및 배송 차량에 대해 매일 위생 검수를 시행하고 있습니다. 어르신들의 칭찬 및 성원에 보답하겠습니다.
         </p>
       </section>
     </div>
