@@ -63,14 +63,14 @@ export const AdminStats: React.FC = () => {
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '12px',
+        gap: '16px',
         backgroundColor: '#FFF',
-        padding: '16px 24px',
+        padding: '20px 28px',
         borderRadius: 'var(--radius-md)',
         border: '1px solid var(--border-color)',
         boxShadow: 'var(--shadow-sm)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-main)', fontWeight: 600 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-main)', fontWeight: 600, minWidth: '100px' }}>
           <Calendar size={18} />
           <span>기간 필터:</span>
         </div>
@@ -84,10 +84,11 @@ export const AdminStats: React.FC = () => {
             borderRadius: '8px',
             outline: 'none',
             fontSize: '0.9rem',
-            fontFamily: 'inherit'
+            fontFamily: 'inherit',
+            width: '140px'
           }}
         />
-        <span style={{ color: 'var(--color-text-muted)' }}>~</span>
+        <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>~</span>
         <input 
           type="date" 
           value={endDate} 
@@ -98,7 +99,8 @@ export const AdminStats: React.FC = () => {
             borderRadius: '8px',
             outline: 'none',
             fontSize: '0.9rem',
-            fontFamily: 'inherit'
+            fontFamily: 'inherit',
+            width: '140px'
           }}
         />
         {(startDate || endDate) && (

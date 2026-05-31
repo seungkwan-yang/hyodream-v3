@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
 import type { Inquiry, InquiryStatus } from '../context/AppContext';
-import { Search, Calendar, MapPin, Phone, Eye, Trash2, Clipboard, X, CheckCircle, Clock, Truck, Award, Download } from 'lucide-react';
+import { Search, Calendar, MapPin, Phone, Edit3, Trash2, Clipboard, X, CheckCircle, Clock, Truck, Award, Download } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export const OrderList: React.FC = () => {
@@ -342,15 +342,16 @@ export const OrderList: React.FC = () => {
                           onClick={() => handleOpenDetail(item)}
                           title="상세 보기"
                           style={{
-                            width: '32px', height: '32px', border: '1px solid var(--border-color)',
+                            width: 'auto', padding: '0 12px', height: '32px', border: '1px solid var(--border-color)',
                             borderRadius: '6px', cursor: 'pointer', backgroundColor: '#FFF',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
                             color: 'var(--color-text-sub)', transition: 'var(--transition-smooth)'
                           }}
                           onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-primary)'; e.currentTarget.style.borderColor = 'var(--color-primary)'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-sub)'; e.currentTarget.style.borderColor = 'var(--border-color)'; }}
                         >
-                          <Eye size={15} />
+                          <Edit3 size={15} />
+                          <span style={{ fontSize: '0.8rem' }}>관리</span>
                         </button>
                         <button
                           onClick={() => handleDelete(item.id)}
