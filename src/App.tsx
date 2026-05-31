@@ -17,6 +17,11 @@ const AppContent: React.FC = () => {
   // Custom Estimator Config selected to proceed to Form
   const [estimatorConfig, setEstimatorConfig] = useState<any>(null);
 
+  // Auto-scroll to top smoothly when customer tab or ordering sub-steps change (crucial for mobile conversion rate)
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [customerTab, estimatorConfig]);
+
   const handleProceedToForm = (config: any) => {
     setEstimatorConfig(config);
   };

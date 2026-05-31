@@ -280,10 +280,11 @@ export const WriteReview: React.FC = () => {
               </label>
               <input
                 id="custPhone"
-                type="text"
+                type="tel"
+                inputMode="numeric"
                 value={custPhone}
-                onChange={(e) => setCustPhone(e.target.value)}
-                placeholder="예: 010-5678-1234 (하이픈 제외 가능)"
+                onChange={(e) => setCustPhone(e.target.value.replace(/[^0-9]/g, ''))}
+                placeholder="예: 01056781234 (하이픈 '-' 제외 숫자만)"
                 style={{
                   width: '100%',
                   padding: '14px 18px',

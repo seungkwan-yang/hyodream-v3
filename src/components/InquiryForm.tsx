@@ -59,8 +59,8 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
 
     if (step === 3) {
       if (!customerName.trim()) newErrors.customerName = '주문자(신청인) 성함을 입력해 주세요.';
-      if (!phone.trim() || !/^\d{2,3}-\d{3,4}-\d{4}$/.test(phone)) {
-        newErrors.phone = '올바른 연락처 형식(예: 010-1234-5678)으로 입력해 주세요.';
+      if (!phone.trim() || !/^\d{9,11}$/.test(phone)) {
+        newErrors.phone = '올바른 연락처 형식(예: 01012345678 - 숫자만)으로 입력해 주세요.';
       }
       
       if (Object.keys(newErrors).length > 0) {
@@ -372,9 +372,10 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
                 </label>
                 <input
                   type="tel"
-                  placeholder="010-1234-5678 (하이픈 포함)"
+                  inputMode="numeric"
+                  placeholder="01012345678 (하이픈 '-' 제외 숫자만)"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ''))}
                 />
                 {errors.phone && <span style={{ color: 'var(--color-rose)', fontSize: '0.75rem', fontWeight: 600, display: 'block', marginTop: '6px' }}>{errors.phone}</span>}
               </div>
