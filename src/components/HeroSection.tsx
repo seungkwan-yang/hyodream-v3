@@ -133,10 +133,10 @@ export const HeroSection: React.FC = () => {
               <Truck size={28} />
             </div>
             <h3 className="serif-font" style={{ fontSize: '1.25rem', marginBottom: '14px', fontWeight: 700 }}>
-              안심 직배송 안전 탑차 배달
+              안심 직배송 직원 직접 전달
             </h3>
             <p style={{ fontSize: '0.9rem', color: 'var(--color-text-sub)', lineHeight: '1.6' }}>
-              파손 위험이 있는 일반 퀵 서비스나 일반 택배 배송을 이용하지 않습니다. 보냉 밀폐 전용 플라스틱 패키지에 담아 효드림 전용 차량으로 안전하게 자택 현관문 앞까지 도어 투 도어로 배송합니다.
+              파손 위험이 있는 일반 퀵 서비스나 일반 택배 배송을 이용하지 않습니다. 보냉 밀폐 전용 플라스틱 패키지에 담아 효드림 직원이 직접 자택 현관문 앞까지 도어 투 도어로 안전하게 전달해 드립니다.
             </p>
           </div>
         </div>
