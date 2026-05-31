@@ -1,13 +1,5 @@
 import React, { useState } from 'react';
-import { Star, ChevronDown, CheckCircle2, Award, Heart } from 'lucide-react';
-
-interface Review {
-  name: string;
-  rating: number;
-  date: string;
-  content: string;
-  packageType: string;
-}
+import { ChevronDown, CheckCircle2, Award } from 'lucide-react';
 
 interface FAQItem {
   question: string;
@@ -16,30 +8,6 @@ interface FAQItem {
 
 export const FAQ: React.FC = () => {
   const [openFAQIndex, setOpenFAQIndex] = useState<number | null>(0);
-
-  const reviews: Review[] = [
-    {
-      name: '이*호 (인천 연수구)',
-      rating: 5,
-      date: '2026-05-18',
-      content: '어머님 기제사로 급히 주문했습니다. 3일 전에 주문했는데 당일에 전용 차량으로 정갈하게 박싱되어 와서 안심했어요. 전 종류가 특히 도톰하고 기름 쩐내 없이 새벽에 부친 게 티가 나더군요. 친척 어르신들도 칭찬 많이 하셔서 뿌듯했습니다.',
-      packageType: '표준 맞춤상 (기제사 중)'
-    },
-    {
-      name: '박*정 (인천 부평구)',
-      rating: 5,
-      date: '2026-05-12',
-      content: '핵가족이라 소가족 실속상으로 주문했어요. 과일도 흠집 하나 없이 특등과들만 왔고 밤 깎은 정성도 보였네요. 전복 추가했는데 꼬들하니 아주 인기 좋았습니다. 앞으로 제사때마다 효드림만 애용할 생각입니다.',
-      packageType: '소가족 실속상 + 활전복 추가'
-    },
-    {
-      name: '최*환 (경기도 부천시)',
-      rating: 5,
-      date: '2026-05-04',
-      content: '사무실 새로 이전하면서 개업 고사상 대행으로 예약했는데 완전 마음에 듭니다. 돼지머리 상태도 아주 훌륭했고 시루떡이 진짜 김이 모락모락 나는 채로 와서 놀랐습니다. 번창하겠습니다 대박나세요!',
-      packageType: '개업 고사상'
-    }
-  ];
 
   const faqs: FAQItem[] = [
     {
@@ -62,74 +30,6 @@ export const FAQ: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '56px' }} className="animate-fade-in-up">
-      
-      {/* Visual Review Grid */}
-      <section>
-        <div style={{ textAlign: 'center', marginBottom: '36px' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            backgroundColor: 'rgba(197, 155, 39, 0.1)',
-            padding: '6px 14px',
-            borderRadius: '20px',
-            color: 'var(--color-gold)',
-            fontSize: '0.8rem',
-            fontWeight: 700,
-            marginBottom: '12px'
-          }}>
-            <Heart size={14} style={{ fill: 'var(--color-gold)' }} />
-            정성 가득 리얼 평점 5.0 만족도
-          </div>
-          <h2 className="serif-font" style={{ fontSize: '2rem', fontWeight: 800 }}>효드림을 이용하신 가족들의 후기</h2>
-          <div className="korean-divider" />
-        </div>
-
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '24px'
-        }}>
-          {reviews.map((rev, idx) => (
-            <div key={idx} className="premium-card korean-border-box" style={{
-              padding: '32px 28px',
-              backgroundColor: '#FFFFFF',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between'
-            }}>
-              <div>
-                {/* Rating stars */}
-                <div style={{ display: 'flex', gap: '3px', color: 'var(--color-gold)', marginBottom: '14px' }}>
-                  {Array.from({ length: rev.rating }).map((_, i) => (
-                    <Star key={i} size={16} style={{ fill: 'var(--color-gold)' }} />
-                  ))}
-                </div>
-                <p style={{ fontSize: '0.88rem', color: 'var(--color-text-sub)', lineHeight: 1.6, fontStyle: 'italic' }}>
-                  "{rev.content}"
-                </p>
-              </div>
-
-              <div style={{
-                marginTop: '24px',
-                paddingTop: '16px',
-                borderTop: '1px dashed var(--border-color)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                fontSize: '0.8rem'
-              }}>
-                <div>
-                  <strong style={{ display: 'block', color: 'var(--color-text-main)' }}>{rev.name}</strong>
-                  <span style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>주문상품: {rev.packageType}</span>
-                </div>
-                <span style={{ color: 'var(--color-text-muted)' }}>{rev.date}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* Accordion FAQ Area */}
       <section style={{ maxWidth: '800px', margin: '0 auto', width: '100%', padding: '0 16px' }}>
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
@@ -216,10 +116,9 @@ export const FAQ: React.FC = () => {
           부모님을 모시는 효(孝)의 마음, 약속을 지키겠습니다
         </h4>
         <p style={{ fontSize: '0.85rem', color: 'var(--color-text-sub)', maxWidth: '500px', lineHeight: 1.5 }}>
-          효드림은 모든 위생 조리 시설과 배송 차량에 대해 매일 위생 검수를 시행하고 있습니다. 어르신들의 칭찬과 성원에 보답하겠습니다.
+          효드림은 모든 위생 조리 시설 및 배송 차량에 대해 매일 위생 검수를 시행하고 있습니다. 어르신들의 칭찬과 성원에 보답하겠습니다.
         </p>
       </section>
-
     </div>
   );
 };

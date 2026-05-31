@@ -6,6 +6,7 @@ import { Estimator } from './components/Estimator';
 import { InquiryForm } from './components/InquiryForm';
 import { MenuCatalog } from './components/MenuCatalog';
 import { FAQ } from './components/FAQ';
+import { Reviews } from './components/Reviews';
 import { AdminDashboard } from './admin/AdminDashboard';
 import { Phone, MapPin, Shield } from 'lucide-react';
 
@@ -28,8 +29,11 @@ const AppContent: React.FC = () => {
     switch (customerTab) {
       case 'home':
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '80px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '60px' }}>
             <HeroSection />
+            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '40px' }}>
+              <Reviews />
+            </div>
             <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '40px' }}>
               <FAQ />
             </div>
@@ -48,6 +52,7 @@ const AppContent: React.FC = () => {
       case 'menu':
         return <MenuCatalog />;
       case 'reviews':
+        return <Reviews />;
       case 'faq':
         return <FAQ />;
       default:
