@@ -15,7 +15,6 @@ export const WriteReview: React.FC = () => {
 
   // Matched Inquiry details auto-bound
   const [matchedInquiry, setMatchedInquiry] = useState<any>(null);
-  const [computedRegion, setComputedRegion] = useState<string>('');
   const [computedMaskedName, setComputedMaskedName] = useState<string>('');
 
   // 2. Form Phase States
@@ -99,7 +98,6 @@ export const WriteReview: React.FC = () => {
     // Success! Bind auto-detected properties
     setMatchedInquiry(matched);
     const region = extractRegion(matched.address);
-    setComputedRegion(region);
     const masked = maskName(matched.customerName);
     setComputedMaskedName(region ? `${masked} (${region})` : masked);
 

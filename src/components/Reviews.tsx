@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Award, CheckCircle2, Heart, Sparkles } from 'lucide-react';
+import { Star, Award, CheckCircle2, Heart } from 'lucide-react';
 
 interface Review {
   id?: number;
