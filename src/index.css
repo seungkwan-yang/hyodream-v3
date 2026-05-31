@@ -1,20 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600;700;900&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  /* Color Palette - Premium K-Modern (Ink Slate) */
-  --bg-primary: #F6F7F9;
-  --bg-secondary: #EAECEF;
-  --bg-tertiary: #DEE1E5;
-  --color-primary: #3E4A5A;
-  --color-primary-light: #546070;
-  --color-primary-dark: #2A333F;
-  --color-primary-fade: rgba(62, 74, 90, 0.08);
-  --color-text-main: #1C2025;
-  --color-text-sub: #454E59;
-  --color-text-muted: #7E8A99;
+  /* Color Palette - Premium K-Modern (Light Gray) */
+  --bg-primary: #F8F9FA;
+  --bg-secondary: #F1F3F5;
+  --bg-tertiary: #E9ECEF;
+  --color-primary: #ADB5BD;
+  --color-primary-light: #CED4DA;
+  --color-primary-dark: #6C757D;
+  --color-primary-fade: rgba(173, 181, 189, 0.15);
+  --color-text-main: #212529;
+  --color-text-sub: #495057;
+  --color-text-muted: #868E96;
   --color-gold: #E6C594;
   --color-rose: #E3B098;
-  --border-color: #E2E8F0;
+  --border-color: #DEE2E6;
   
   /* Layout & Shadows */
   --radius-sm: 8px;
@@ -33,9 +33,9 @@
 
 /* Darker focus states inside admin dashboard if needed, still matching theme */
 .admin-theme {
-  --bg-primary: #F2F4F7;
-  --bg-secondary: #E6EAF0;
-  --border-color: #CBD5E1;
+  --bg-primary: #F8F9FA;
+  --bg-secondary: #F1F3F5;
+  --border-color: #DEE2E6;
 }
 
 * {
