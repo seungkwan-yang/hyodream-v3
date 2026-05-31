@@ -141,9 +141,9 @@ export const Header: React.FC = () => {
       {viewMode === 'customer' && (
         <nav className="pc-nav" style={{ display: 'flex', gap: '8px' }}>
           {[
-            { id: 'home', label: '브랜드 홈' },
-            { id: 'estimator', label: '실시간 상차림 주문기' },
-            { id: 'menu', label: '정갈한 품목 소개' },
+            { id: 'home', label: '홈' },
+            { id: 'estimator', label: '상차림' },
+            { id: 'menu', label: '상차림 품목 소개' },
             { id: 'reviews', label: '고객 포토 후기' },
             { id: 'faq', label: '자주 묻는 질문' },
             { id: 'write-review', label: '후기작성' }
@@ -235,9 +235,9 @@ export const Header: React.FC = () => {
           {viewMode === 'customer' ? (
             <>
               {[
-                { id: 'home', label: '브랜드 홈' },
-                { id: 'estimator', label: '실시간 상차림 주문기' },
-                { id: 'menu', label: '정갈한 품목 소개' },
+                { id: 'home', label: '홈' },
+                { id: 'estimator', label: '상차림' },
+                { id: 'menu', label: '상차림 품목 소개' },
                 { id: 'reviews', label: '고객 포토 후기' },
                 { id: 'faq', label: '자주 묻는 질문' },
                 { id: 'write-review', label: '후기작성' }
