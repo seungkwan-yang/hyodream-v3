@@ -227,6 +227,47 @@ async function seedDatabase() {
       `);
     }
 
+    // 6. Ensure hd_reviews table exists and seed it
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS hd_reviews (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(100) NOT NULL,
+          rating INTEGER NOT NULL,
+          date VARCHAR(50) NOT NULL,
+          title VARCHAR(200) DEFAULT '',
+          content TEXT NOT NULL,
+          package_type VARCHAR(150) NOT NULL,
+          image_url TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    
+    // Self-healing schema migration: ensure column 'title' exists in database
+    await client.query('ALTER TABLE hd_reviews ADD COLUMN IF NOT EXISTS title VARCHAR(200) DEFAULT \'\';');
+    
+    const reviewCheck = await client.query('SELECT COUNT(*) FROM hd_reviews');
+    if (parseInt(reviewCheck.rows[0].count) === 0) {
+      console.log('[HyoDream DB Engine] Seeding default reviews...');
+      await client.query(`
+        INSERT INTO hd_reviews (name, rating, date, title, content, package_type, image_url) VALUES
+        ('이*호 (인천 연수구)', 5, '2026-05-18', '정말 대만족스러운 기제사상이었습니다!', '어머님 기제사로 급히 주문했습니다. 3일 전에 주문했는데 당일에 전용 차량으로 정갈하게 박싱되어 와서 안심했어요. 전 종류가 특히 도톰하고 기름 쩐내 없이 새벽에 부친 게 티가 나더군요. 친척 어르신들도 칭찬 많이 하셔서 뿌듯했습니다.', '표준 맞춤상 (기제사 중)', 'https://images.unsplash.com/photo-1626200419199-391ae4be7a40?auto=format&fit=crop&w=600&q=80'),
+        ('박*정 (인천 부평구)', 5, '2026-05-12', '소가족이 먹기에 알차고 깔끔합니다.', '핵가족이라 소가족 실속상으로 주문했어요. 과일도 흠집 하나 없이 특등과들만 왔고 밤 깎은 정성도 보였네요. 전복 추가했는데 꼬들하니 아주 인기 좋았습니다. 앞으로 제사때마다 효드림만 애용할 생각입니다.', '소가족 실속상 + 활전복 추가', 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=600&q=80'),
+        ('최*환 (경기도 부천시)', 4, '2026-05-04', '회사 개업고사 아주 성황리에 마쳤습니다!', '사무실 새로 이전하면서 개업 고사상 대행으로 예약했는데 완전 마음에 듭니다. 돼지머리 상태도 아주 훌륭했고 시루떡이 진짜 김이 모락모락 나는 채로 와서 놀랐습니다. 번창하겠습니다 대박나세요!', '개업 고사상', NULL),
+        ('정*우 (인천 서구)', 5, '2026-05-25', '음식 맛이 정말 깊고 정갈하네요.', '기제사 중상을 시켰는데 음식 하나하나가 너무 정성스럽습니다. 나물도 간이 딱 맞고 특히 갈비찜 고기가 입안에서 부드럽게 녹아내리더군요. 제사 모시고 가족들과 정말 맛있게 음복했습니다.', '표준 맞춤상 (기제사 중)', NULL),
+        ('김*아 (인천 연수구)', 5, '2026-05-22', '포장도 깔끔하고 위생 상태가 최고입니다.', '처음 대행 서비스를 이용해서 걱정이 많았는데 기대 이상입니다. 포장이 개별 용기로 꼼꼼하게 와서 국물이 새거나 흐른 것이 하나도 없었어요. 과일도 백화점 고급 과일 수준이라 어르신들께서 대만족하셨습니다.', '명가 전통상 (기제사 대)', NULL),
+        ('윤*원 (경기도 시흥시)', 5, '2026-05-20', '생선(참조기) 굽기 자태가 남다릅니다.', '조기 상태가 어쩜 이렇게 꼿꼿하고 튼튼하게 잘 구워졌는지 감탄했습니다. 비늘이나 지느러미 손질도 아주 깔끔했고 겉바속촉 그 자체네요. 앞으로 번거롭게 장보고 전 부치지 않고 무조건 효드림 예약하겠습니다.', '표준 맞춤상 + 조기 특대 추가', NULL),
+        ('최*지 (인천 남동구)', 4, '2026-05-15', '제사를 경건하고 정갈하게 모셨습니다.', '할머니 제사라 소가족 실속상으로 차렸는데 나물 색감도 예쁘고 탕국도 양지 육수라 국물이 깊고 맑았습니다. 포장도 정성이 보여서 제사를 아주 경건하게 마쳤네요. 감사합니다.', '소가족 실속상 (기제사 소)', NULL),
+        ('강*수 (인천 계양구)', 4, '2026-05-10', '식혜 맛이 집에서 직접 담근 수준입니다!', '식혜가 가마솥에 직접 삭힌 맛이라 시판 식혜랑은 차원이 다르네요. 많이 달지 않으면서도 깊은 풍미가 있어 아이들도 너무 좋아했습니다. 1.8L 순삭했네요. 다음에는 두 병 주문하려 합니다.', '소가족 실속상 + 수제 식혜 추가', NULL),
+        ('임*영 (경기도 부천시)', 5, '2026-05-08', '직원들 모두 만족한 훌륭한 개업고사상', '개업 고사 대행으로 시켰는데 준비해 주신 돼지머리가 엄청 깔끔하고 인물이 좋아서 직원들 모두 웃으며 고사를 지냈습니다. 시루떡도 엄청 쫀득하고 따끈하게 도착했네요. 덕분에 사업 번창할 것 같습니다!', '개업 고사상', NULL),
+        ('한*희 (인천 중구)', 5, '2026-05-01', '급히 예약했는데 정시 배송 감사합니다.', '갑작스럽게 기일을 챙기게 되어 급히 예약했는데 3일 만에 정확히 정량 배송되었네요. 전통 한과도 명가 제품이라 너무 맛있었고 제구(향/초)도 챙겨주셔서 별도 준비 없이 완벽하게 상을 차렸습니다.', '명가 전통상 + 제구 세트 대여', NULL),
+        ('송*혜 (경기도 시흥시)', 5, '2026-04-28', '수제 전 종류가 가시도 없고 정말 맛나네요.', '수제 동태전 가시가 진짜 단 하나도 없어서 아이와 노모께서 안심하고 맛있게 드셨습니다. 육즙 가득한 동그랑땡도 도톰해서 씹는 맛이 최고였네요. 명절 차례상 예약 미리 신청해 두려 합니다.', '표준 맞춤상 (기제사 중)', NULL),
+        ('고*원 (인천 동구)', 4, '2026-04-22', '나물의 고소하고 풍성한 향이 일품입니다.', '나물의 아린 맛이나 쓴 맛이 완전히 제거되어 고소하고 향긋한 나물 본연의 맛이 너무 훌륭했습니다. 고사리, 도라지, 시금치 전부 흠잡을 데가 없네요. 음식 장만 스트레스에서 벗어나게 해 주셔서 감사해요.', '소가족 실속상 (기제사 소)', NULL),
+        ('신*윤 (인천 서구)', 5, '2026-04-18', '배송 탑차 기사님도 친절하고 프리미엄하네요.', '배송 기사님께서 무척 친절하셨고 안전 탑차로 직접 집 앞까지 정성스레 들어다 주셨습니다. 음식의 신선도와 포장 상태가 그 어떤 온라인 반찬 샵보다 프리미엄했습니다. 효드림 적극 강추합니다.', '명가 전통상 (기제사 대)', NULL),
+        ('송*민 (경기도 부천시)', 5, '2026-04-14', '온 가족이 음복하며 맛있게 먹었습니다.', '음식 간이 삼삼하니 아주 좋았고 양도 생각보다 푸짐해서 넉넉히 나눠 먹었습니다. 동네 반찬 가게보다 퀄리티가 훨씬 높은 제사 음식 전용 샵이라 만족도가 큽니다.', '표준 맞춤상 (기제사 중)', NULL),
+        ('조*정 (인천 남동구)', 4, '2026-04-10', '과일 신선도가 예술입니다. 크기도 크네요.', '과일이 싱싱하고 사과와 배 크기가 특등품이었습니다. 전 종류도 정갈하고 가열해서 데우니까 기름기 쏙 빠지고 바삭하네요. 강추 드립니다.', '소가족 실속상 (기제사 소)', NULL)
+      `);
+    }
+
     console.log('[HyoDream DB Engine] Database integrity verified.');
   } catch (err) {
     console.error('[HyoDream DB Engine] Seeding error (Express server remains alive and active):', err);
@@ -492,6 +533,29 @@ app.delete('/api/inquiries/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM hd_inquiries WHERE id = $1', [id]);
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 6. Customer Reviews API
+app.get('/api/reviews', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, name, rating, date, title, content, package_type as "packageType", image_url as "imageUrl" FROM hd_reviews ORDER BY id DESC');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/reviews', async (req, res) => {
+  const { name, rating, date, title, content, packageType, imageUrl } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO hd_reviews (name, rating, date, title, content, package_type, image_url) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, name, rating, date, title, content, package_type as "packageType", image_url as "imageUrl"',
+      [name, rating, date, title || '', content, packageType, imageUrl || null]
+    );
+    res.status(201).json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

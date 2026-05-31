@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 // Type definitions
 export type ViewMode = 'customer' | 'admin';
-export type CustomerTab = 'home' | 'estimator' | 'menu' | 'reviews' | 'faq';
+export type CustomerTab = 'home' | 'estimator' | 'menu' | 'reviews' | 'faq' | 'write-review';
 export type AdminTab = 'dashboard' | 'inquiries' | 'pricing';
 export type InquiryStatus = 'pending' | 'approved' | 'processing' | 'completed';
 

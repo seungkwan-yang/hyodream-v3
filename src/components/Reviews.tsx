@@ -1,123 +1,20 @@
-import React, { useState } from 'react';
-import { Star, Award, CheckCircle2, Heart } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Star, Award, CheckCircle2, Heart, Sparkles } from 'lucide-react';
 
 interface Review {
+  id?: number;
   name: string;
   rating: number;
   date: string;
+  title?: string;
   content: string;
   packageType: string;
+  imageUrl?: string;
 }
 
 export const Reviews: React.FC = () => {
-  // 15 high-quality customer reviews with slightly varied ratings and dates for sorting/pagination/more-loading demonstration
-  const reviews: Review[] = [
-    {
-      name: '이*호 (인천 연수구)',
-      rating: 5,
-      date: '2026-05-18',
-      content: '어머님 기제사로 급히 주문했습니다. 3일 전에 주문했는데 당일에 전용 차량으로 정갈하게 박싱되어 와서 안심했어요. 전 종류가 특히 도톰하고 기름 쩐내 없이 새벽에 부친 게 티가 나더군요. 친척 어르신들도 칭찬 많이 하셔서 뿌듯했습니다.',
-      packageType: '표준 맞춤상 (기제사 중)'
-    },
-    {
-      name: '박*정 (인천 부평구)',
-      rating: 5,
-      date: '2026-05-12',
-      content: '핵가족이라 소가족 실속상으로 주문했어요. 과일도 흠집 하나 없이 특등과들만 왔고 밤 깎은 정성도 보였네요. 전복 추가했는데 꼬들하니 아주 인기 좋았습니다. 앞으로 제사때마다 효드림만 애용할 생각입니다.',
-      packageType: '소가족 실속상 + 활전복 추가'
-    },
-    {
-      name: '최*환 (경기도 부천시)',
-      rating: 4, // 4-star for rating variation
-      date: '2026-05-04',
-      content: '사무실 새로 이전하면서 개업 고사상 대행으로 예약했는데 완전 마음에 듭니다. 돼지머리 상태도 아주 훌륭했고 시루떡이 진짜 김이 모락모락 나는 채로 와서 놀랐습니다. 번창하겠습니다 대박나세요!',
-      packageType: '개업 고사상'
-    },
-    {
-      name: '정*우 (인천 서구)',
-      rating: 5,
-      date: '2026-05-25',
-      content: '기제사 중상을 시켰는데 음식 하나하나가 너무 정성스럽습니다. 나물도 간이 딱 맞고 특히 갈비찜 고기가 입안에서 부드럽게 녹아내리더군요. 제사 모시고 가족들과 정말 맛있게 음복했습니다.',
-      packageType: '표준 맞춤상 (기제사 중)'
-    },
-    {
-      name: '김*아 (인천 연수구)',
-      rating: 5,
-      date: '2026-05-22',
-      content: '처음 대행 서비스를 이용해서 걱정이 많았는데 기대 이상입니다. 포장이 개별 용기로 꼼꼼하게 와서 국물이 새거나 흐른 것이 하나도 없었어요. 과일도 백화점 고급 과일 수준이라 어르신들께서 대만족하셨습니다.',
-      packageType: '명가 전통상 (기제사 대)'
-    },
-    {
-      name: '윤*원 (경기도 시흥시)',
-      rating: 5,
-      date: '2026-05-20',
-      content: '조기 상태가 어쩜 이렇게 꼿꼿하고 튼튼하게 잘 구워졌는지 감탄했습니다. 비늘이나 지느러미 손질도 아주 깔끔했고 겉바속촉 그 자체네요. 앞으로 번거롭게 장보고 전 부치지 않고 무조건 효드림 예약하겠습니다.',
-      packageType: '표준 맞춤상 + 조기 특대 추가'
-    },
-    {
-      name: '최*지 (인천 남동구)',
-      rating: 4, // 4-star for rating variation
-      date: '2026-05-15',
-      content: '할머니 제사라 소가족 실속상으로 차렸는데 나물 색감도 예쁘고 탕국도 양지 육수라 국물이 깊고 맑았습니다. 포장도 정성이 보여서 제사를 아주 경건하게 마쳤네요. 감사합니다.',
-      packageType: '소가족 실속상 (기제사 소)'
-    },
-    {
-      name: '강*수 (인천 계양구)',
-      rating: 4, // 4-star for rating variation
-      date: '2026-05-10',
-      content: '식혜가 가마솥에 직접 삭힌 맛이라 시판 식혜랑은 차원이 다르네요. 많이 달지 않으면서도 깊은 풍미가 있어 아이들도 너무 좋아했습니다. 1.8L 순삭했네요. 다음에는 두 병 주문하려 합니다.',
-      packageType: '소가족 실속상 + 수제 식혜 추가'
-    },
-    {
-      name: '임*영 (경기도 부천시)',
-      rating: 5,
-      date: '2026-05-08',
-      content: '개업 고사 대행으로 시켰는데 준비해 주신 돼지머리가 엄청 깔끔하고 인물이 좋아서 직원들 모두 웃으며 고사를 지냈습니다. 시루떡도 엄청 쫀득하고 따끈하게 도착했네요. 덕분에 사업 번창할 것 같습니다!',
-      packageType: '개업 고사상'
-    },
-    {
-      name: '한*희 (인천 중구)',
-      rating: 5,
-      date: '2026-05-01',
-      content: '갑작스럽게 기일을 챙기게 되어 급히 예약했는데 3일 만에 정확히 정량 배송되었네요. 전통 한과도 명가 제품이라 너무 맛있었고 제구(향/초)도 챙겨주셔서 별도 준비 없이 완벽하게 상을 차렸습니다.',
-      packageType: '명가 전통상 + 제구 세트 대여'
-    },
-    {
-      name: '송*혜 (경기도 시흥시)',
-      rating: 5,
-      date: '2026-04-28',
-      content: '수제 동태전 가시가 진짜 단 하나도 없어서 아이와 노모께서 안심하고 맛있게 드셨습니다. 육즙 가득한 동그랑땡도 도톰해서 씹는 맛이 최고였네요. 명절 차례상 예약 미리 신청해 두려 합니다.',
-      packageType: '표준 맞춤상 (기제사 중)'
-    },
-    {
-      name: '고*원 (인천 동구)',
-      rating: 4, // 4-star for rating variation
-      date: '2026-04-22',
-      content: '나물의 아린 맛이나 쓴 맛이 완전히 제거되어 고소하고 향긋한 나물 본연의 맛이 너무 훌륭했습니다. 고사리, 도라지, 시금치 전부 흠잡을 데가 없네요. 음식 장만 스트레스에서 벗어나게 해 주셔서 감사해요.',
-      packageType: '소가족 실속상 (기제사 소)'
-    },
-    {
-      name: '신*윤 (인천 서구)',
-      rating: 5,
-      date: '2026-04-18',
-      content: '배송 기사님께서 무척 친절하셨고 안전 탑차로 직접 집 앞까지 정성스레 들어다 주셨습니다. 음식의 신선도와 포장 상태가 그 어떤 온라인 반찬 샵보다 프리미엄했습니다. 효드림 적극 강추합니다.',
-      packageType: '명가 전통상 (기제사 대)'
-    },
-    {
-      name: '송*민 (경기도 부천시)',
-      rating: 5,
-      date: '2026-04-14',
-      content: '음식 간이 삼삼하니 아주 좋았고 양도 생각보다 푸짐해서 넉넉히 나눠 먹었습니다. 동네 반찬 가게보다 퀄리티가 훨씬 높은 제사 음식 전용 샵이라 만족도가 큽니다.',
-      packageType: '표준 맞춤상 (기제사 중)'
-    },
-    {
-      name: '조*정 (인천 남동구)',
-      rating: 4, // 4-star for rating variation
-      date: '2026-04-10',
-      content: '과일이 싱싱하고 사과와 배 크기가 특등품이었습니다. 전 종류도 정갈하고 가열해서 데우니까 기름기 쏙 빠지고 바삭하네요. 강추 드립니다.',
-      packageType: '소가족 실속상 (기제사 소)'
-    }
-  ];
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   // Sorting and Pagination states (for PC)
   const [sortBy, setSortBy] = useState<'rating' | 'date'>('rating');
@@ -128,14 +25,32 @@ export const Reviews: React.FC = () => {
   // Pagination loading state (for Mobile)
   const [visibleMobileCount, setVisibleMobileCount] = useState<number>(10);
 
+  useEffect(() => {
+    fetchReviews();
+  }, []);
+
+  const fetchReviews = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/reviews');
+      if (response.ok) {
+        const data = await response.json();
+        setReviews(data);
+      }
+    } catch (err) {
+      console.error('Failed to load reviews from database:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSort = (field: 'rating' | 'date') => {
-    // Reset to page 1 upon changing sorting criteria to avoid out-of-bounds UI confusion
     setCurrentPage(1);
     if (sortBy === field) {
       setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
     } else {
       setSortBy(field);
-      setSortOrder('desc'); // Default to descending when switching sorting field
+      setSortOrder('desc');
     }
   };
 
@@ -171,6 +86,22 @@ export const Reviews: React.FC = () => {
 
   // 5. Slice mobile reviews based on mobile paging state
   const mobilePaginatedReviews = reviews.slice(0, visibleMobileCount);
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px', gap: '16px' }}>
+        <div style={{
+          width: '40px',
+          height: '40px',
+          border: '3px solid var(--border-color)',
+          borderTopColor: 'var(--color-primary)',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }} />
+        <span style={{ fontSize: '0.9rem', color: 'var(--color-text-sub)', fontWeight: 600 }}>정갈한 후기를 불러오는 중입니다...</span>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '56px' }} className="animate-fade-in-up">
@@ -220,6 +151,27 @@ export const Reviews: React.FC = () => {
                       <Star key={i} size={16} style={{ fill: 'var(--color-gold)' }} />
                     ))}
                   </div>
+
+                  {/* Photo if exists */}
+                  {rev.imageUrl && (
+                    <div style={{
+                      width: '100%',
+                      height: '140px',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      marginBottom: '14px',
+                      border: '1px solid var(--border-color)'
+                    }}>
+                      <img src={rev.imageUrl} alt="포토 후기" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                  )}
+
+                  {rev.title && (
+                    <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '8px', lineHeight: 1.4 }}>
+                      {rev.title}
+                    </h4>
+                  )}
+
                   <p style={{ fontSize: '0.88rem', color: 'var(--color-text-sub)', lineHeight: 1.6, fontStyle: 'italic' }}>
                     "{rev.content}"
                   </p>
@@ -313,6 +265,27 @@ export const Reviews: React.FC = () => {
                       borderRadius: '10px'
                     }}>Best</span>
                   </div>
+
+                  {/* Photo if exists */}
+                  {rev.imageUrl && (
+                    <div style={{
+                      width: '100%',
+                      height: '140px',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      marginBottom: '14px',
+                      border: '1px solid var(--border-color)'
+                    }}>
+                      <img src={rev.imageUrl} alt="포토 후기" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                  )}
+
+                  {rev.title && (
+                    <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '8px', lineHeight: 1.4 }}>
+                      {rev.title}
+                    </h4>
+                  )}
+
                   <p style={{ fontSize: '0.88rem', color: 'var(--color-text-sub)', lineHeight: 1.6, fontStyle: 'italic' }}>
                     "{rev.content}"
                   </p>
@@ -432,6 +405,20 @@ export const Reviews: React.FC = () => {
                     <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>{rev.date}</span>
                   </div>
 
+                  {/* Photo if exists (PC list preview) */}
+                  {rev.imageUrl && (
+                    <div style={{
+                      width: '54px',
+                      height: '54px',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      flexShrink: 0,
+                      border: '1px solid var(--border-color)'
+                    }}>
+                      <img src={rev.imageUrl} alt="미니 포토" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                  )}
+
                   {/* Customer details */}
                   <div style={{ width: '150px', flexShrink: 0 }}>
                     <strong style={{ fontSize: '0.88rem', display: 'block', color: 'var(--color-text-main)' }}>{rev.name}</strong>
@@ -440,6 +427,11 @@ export const Reviews: React.FC = () => {
 
                   {/* Review Content */}
                   <div style={{ flex: 1, fontSize: '0.85rem', color: 'var(--color-text-sub)', lineHeight: 1.6 }}>
+                    {rev.title && (
+                      <strong style={{ display: 'block', color: 'var(--color-text-main)', marginBottom: '4px', fontSize: '0.88rem' }}>
+                        {rev.title}
+                      </strong>
+                    )}
                     "{rev.content}"
                   </div>
                 </div>

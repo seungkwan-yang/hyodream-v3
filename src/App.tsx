@@ -7,6 +7,7 @@ import { InquiryForm } from './components/InquiryForm';
 import { MenuCatalog } from './components/MenuCatalog';
 import { FAQ } from './components/FAQ';
 import { Reviews } from './components/Reviews';
+import { WriteReview } from './components/WriteReview';
 import { AdminDashboard } from './admin/AdminDashboard';
 import { Phone, MapPin, Shield } from 'lucide-react';
 
@@ -55,6 +56,8 @@ const AppContent: React.FC = () => {
         return <Reviews />;
       case 'faq':
         return <FAQ />;
+      case 'write-review':
+        return <WriteReview />;
       default:
         return <HeroSection />;
     }
