@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
 import type { BaseMenu, CustomOption } from '../context/AppContext';
-import { Calendar, MapPin, User, ChevronRight, ChevronLeft, Check, HelpCircle, ShieldCheck } from 'lucide-react';
+import { Calendar, MapPin, User, ChevronRight, ChevronLeft, Check, HelpCircle, ShieldCheck, X } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { TossCheckout } from './TossCheckout';
 
@@ -21,6 +22,8 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
   const [step, setStep] = useState(initialStep);
   const [showTossModal, setShowTossModal] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [pointsInput, setPointsInput] = useState<string>('');
+  const [appliedPoints, setAppliedPoints] = useState<number>(0);
 
   // Auto-scroll to top smoothly whenever the wizard step or the payment modal changes (essential for mobile payments UX)
   React.useEffect(() => {
@@ -186,7 +189,8 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
       status: initialStatus,
       paymentMethod,
       paymentStatus: initialPaymentStatus,
-      tossTransactionId: transactionId
+      tossTransactionId: transactionId,
+      pointsUsed: appliedPoints
     });
 
     setSubmittedOrder(order);
@@ -310,11 +314,73 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
                 </div>
               )}
 
+              {/* Points Usage Section */}
+              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '16px', paddingBottom: '16px', borderBottom: '1px solid var(--border-color)' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>포인트 사용</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '10px' }}>
+                  <input
+                    type="number"
+                    min="0"
+                    max={currentUser ? currentUser.points : 0}
+                    value={pointsInput}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      if (currentUser && val <= currentUser.points) {
+                        setPointsInput(e.target.value);
+                      } else if (!currentUser) {
+                        setPointsInput('');
+                      } else {
+                        setPointsInput(String(currentUser.points));
+                      }
+                    }}
+                    placeholder={currentUser ? `보유 포인트: ${currentUser.points.toLocaleString()} P` : "비회원은 사용 불가"}
+                    disabled={!currentUser}
+                    style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-color)' }}
+                  />
+                  <button
+                    onClick={() => {
+                      if (!currentUser) return;
+                      const val = Number(pointsInput);
+                      if (val > 0 && val <= currentUser.points) {
+                        setAppliedPoints(val);
+                      } else {
+                        setAppliedPoints(0);
+                        setPointsInput('');
+                      }
+                    }}
+                    disabled={!currentUser || !pointsInput}
+                    className="btn-secondary"
+                    style={{ padding: '10px 16px', borderRadius: '8px', opacity: !currentUser ? 0.5 : 1, cursor: !currentUser ? 'not-allowed' : 'pointer' }}
+                  >
+                    적용하기
+                  </button>
+                  {currentUser && (
+                    <button
+                      onClick={() => {
+                        if (!currentUser) return;
+                        setPointsInput(String(currentUser.points));
+                        setAppliedPoints(currentUser.points);
+                      }}
+                      className="btn-primary"
+                      style={{ padding: '10px 16px', borderRadius: '8px' }}
+                    >
+                      전액 사용
+                    </button>
+                  )}
+                </div>
+                {appliedPoints > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--color-rose)', marginTop: '12px' }}>
+                    <span>포인트 적용 할인</span>
+                    <span style={{ fontWeight: 600 }}>-{appliedPoints.toLocaleString()}원</span>
+                  </div>
+                )}
+              </div>
+
               {/* Grand Total */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px' }}>
-                <span className="serif-font" style={{ fontSize: '1.05rem', fontWeight: 700 }}>상차림 주문 금액</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px' }}>
+                <span className="serif-font" style={{ fontSize: '1.05rem', fontWeight: 700 }}>상차림 최종 결제 금액</span>
                 <span className="serif-font" style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-                  {initialConfig.calculatedTotal.toLocaleString()}원
+                  {(initialConfig.calculatedTotal - appliedPoints).toLocaleString()}원
                 </span>
               </div>
             </div>
@@ -344,7 +410,7 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
                 <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-sub)', display: 'block', marginBottom: '8px' }}>
                   제사/행사 치르는 날짜 선택
                 </label>
-                <div style={{ position: 'relative' }}>
+                <div style={{ position: 'relative', width: '100%' }}>
                   <Calendar size={18} style={{
                     position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)',
                     color: 'var(--color-text-muted)', pointerEvents: 'none'
@@ -354,7 +420,7 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
                     min={getMinDateString()}
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    style={{ paddingLeft: '44px' }}
+                    style={{ paddingLeft: '44px', width: '100%', boxSizing: 'border-box' }}
                   />
                 </div>
                 {errors.date && <span style={{ color: 'var(--color-rose)', fontSize: '0.75rem', fontWeight: 600, display: 'block', marginTop: '6px' }}>{errors.date}</span>}
@@ -623,11 +689,19 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
               </div>
 
               {/* Total Summary */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed var(--border-color)', paddingTop: '14px' }}>
-                <span className="serif-font" style={{ fontSize: '0.95rem', fontWeight: 700 }}>총 결제 금액</span>
-                <span className="serif-font" style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-                  {submittedOrder.totalPrice.toLocaleString()}원
-                </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px dashed var(--border-color)', paddingTop: '14px' }}>
+                {submittedOrder.pointsUsed && submittedOrder.pointsUsed > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>사용한 포인트</span>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-rose)' }}>-{submittedOrder.pointsUsed.toLocaleString()} P</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="serif-font" style={{ fontSize: '0.95rem', fontWeight: 700 }}>총 결제 금액</span>
+                  <span className="serif-font" style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-primary)' }}>
+                    {submittedOrder.totalPrice.toLocaleString()}원
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -657,7 +731,7 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
       </div>
 
       {/* Login / Guest Selection Modal */}
-      {showLoginPrompt && (
+      {showLoginPrompt && createPortal(
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
           backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
@@ -665,8 +739,21 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
         }}>
           <div className="premium-card animate-scale-up" style={{
             backgroundColor: '#FFF', padding: '40px', borderRadius: '24px', width: '90%', maxWidth: '400px',
-            textAlign: 'center', boxShadow: 'var(--shadow-lg)'
+            textAlign: 'center', boxShadow: 'var(--shadow-lg)', position: 'relative'
           }}>
+            <button
+              onClick={() => setShowLoginPrompt(false)}
+              style={{
+                position: 'absolute', top: '16px', right: '16px',
+                background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%',
+                width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', color: 'var(--color-text-sub)', transition: 'var(--transition-smooth)'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.1)'; e.currentTarget.style.color = 'var(--color-text-main)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'; e.currentTarget.style.color = 'var(--color-text-sub)'; }}
+            >
+              <X size={18} />
+            </button>
             <h3 className="serif-font" style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '16px' }}>주문 진행 안내</h3>
             <p style={{ fontSize: '0.9rem', color: 'var(--color-text-sub)', marginBottom: '32px', lineHeight: 1.6 }}>
               로그인 후 주문하시면 배송 정보가 자동으로 입력되며, <br/>다양한 포인트 적립 혜택을 받으실 수 있습니다.
@@ -695,13 +782,14 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* TOSS PAYMENTS MODAL */}
       {showTossModal && (
         <TossCheckout
-          amount={initialConfig.calculatedTotal}
+          amount={initialConfig.calculatedTotal - appliedPoints}
           orderName={initialConfig.selectedPackage.name}
           customerName={customerName}
           onSuccess={handlePaymentSuccess}

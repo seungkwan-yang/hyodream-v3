@@ -182,6 +182,8 @@ async function seedDatabase() {
     
     await client.query('ALTER TABLE hd_inquiries ADD COLUMN IF NOT EXISTS user_id VARCHAR(50);');
     await client.query('ALTER TABLE hd_inquiries ADD COLUMN IF NOT EXISTS points_earned INTEGER DEFAULT 0;');
+    await client.query('ALTER TABLE hd_inquiries ADD COLUMN IF NOT EXISTS points_used INTEGER DEFAULT 0;');
+    await client.query('ALTER TABLE hd_inquiries ADD COLUMN IF NOT EXISTS points_used INTEGER DEFAULT 0;');
     
     console.log('[HyoDream DB Engine] Self-healing tables verified/created.');
     
@@ -439,7 +441,8 @@ app.get('/api/users/:username/orders', async (req, res) => {
       paymentStatus: row.payment_status,
       tossTransactionId: row.toss_transaction_id,
       userId: row.user_id,
-      pointsEarned: row.points_earned
+      pointsEarned: row.points_earned,
+      pointsUsed: row.points_used
     }));
     res.json(mapped);
   } catch (err) {
@@ -662,7 +665,7 @@ app.delete('/api/custom-options/:id', async (req, res) => {
 // 5. Inquiries CRUD (Orders)
 app.get('/api/inquiries', async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, customer_name as "customerName", phone, ritual_type as "ritualType", date, time_slot as "timeSlot", address, address_detail as "addressDetail", special_requests as "specialRequests", customizations, subtractions, total_price as "totalPrice", created_at as "createdAt", status, admin_notes as "adminNotes", payment_method as "paymentMethod", payment_status as "paymentStatus", toss_transaction_id as "tossTransactionId", user_id as "userId", points_earned as "pointsEarned" FROM hd_inquiries ORDER BY db_created_at DESC');
+    const result = await pool.query('SELECT id, customer_name as "customerName", phone, ritual_type as "ritualType", date, time_slot as "timeSlot", address, address_detail as "addressDetail", special_requests as "specialRequests", customizations, subtractions, total_price as "totalPrice", created_at as "createdAt", status, admin_notes as "adminNotes", payment_method as "paymentMethod", payment_status as "paymentStatus", toss_transaction_id as "tossTransactionId", user_id as "userId", points_earned as "pointsEarned", points_used as "pointsUsed" FROM hd_inquiries ORDER BY db_created_at DESC');
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -670,21 +673,28 @@ app.get('/api/inquiries', async (req, res) => {
 });
 
 app.post('/api/inquiries', async (req, res) => {
-  const { id, customerName, phone, ritualType, date, timeSlot, address, addressDetail, specialRequests, customizations, subtractions, totalPrice, createdAt, status, adminNotes, paymentMethod, paymentStatus, tossTransactionId, userId } = req.body;
+  const { id, customerName, phone, ritualType, date, timeSlot, address, addressDetail, specialRequests, customizations, subtractions, totalPrice, createdAt, status, adminNotes, paymentMethod, paymentStatus, tossTransactionId, userId, pointsUsed } = req.body;
   try {
     const pointsEarned = Math.floor(totalPrice * 0.01);
+    const used = pointsUsed || 0;
 
     await pool.query('BEGIN');
 
     const result = await pool.query(
-      `INSERT INTO hd_inquiries (id, customer_name, phone, ritual_type, date, time_slot, address, address_detail, special_requests, customizations, subtractions, total_price, created_at, status, admin_notes, payment_method, payment_status, toss_transaction_id, user_id, points_earned) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) 
-       RETURNING id, customer_name as "customerName", phone, ritual_type as "ritualType", date, time_slot as "timeSlot", address, address_detail as "addressDetail", special_requests as "specialRequests", customizations, subtractions, total_price as "totalPrice", created_at as "createdAt", status, admin_notes as "adminNotes", payment_method as "paymentMethod", payment_status as "paymentStatus", toss_transaction_id as "tossTransactionId", user_id as "userId", points_earned as "pointsEarned"`,
-      [id, customerName, phone, ritualType, date, timeSlot, address, addressDetail, specialRequests, customizations || [], subtractions || [], totalPrice, createdAt, status || 'pending', adminNotes, paymentMethod, paymentStatus || 'pending', tossTransactionId, userId || null, pointsEarned]
+      `INSERT INTO hd_inquiries (id, customer_name, phone, ritual_type, date, time_slot, address, address_detail, special_requests, customizations, subtractions, total_price, created_at, status, admin_notes, payment_method, payment_status, toss_transaction_id, user_id, points_earned, points_used) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) 
+       RETURNING id, customer_name as "customerName", phone, ritual_type as "ritualType", date, time_slot as "timeSlot", address, address_detail as "addressDetail", special_requests as "specialRequests", customizations, subtractions, total_price as "totalPrice", created_at as "createdAt", status, admin_notes as "adminNotes", payment_method as "paymentMethod", payment_status as "paymentStatus", toss_transaction_id as "tossTransactionId", user_id as "userId", points_earned as "pointsEarned", points_used as "pointsUsed"`,
+      [id, customerName, phone, ritualType, date, timeSlot, address, addressDetail, specialRequests, customizations || [], subtractions || [], totalPrice, createdAt, status || 'pending', adminNotes, paymentMethod, paymentStatus || 'pending', tossTransactionId, userId || null, pointsEarned, used]
     );
 
+    // Award points if already paid via PG
     if (userId && (paymentStatus === 'paid')) {
       await pool.query('UPDATE hd_users SET points = points + $1 WHERE username = $2', [pointsEarned, userId]);
+    }
+    
+    // Deduct points immediately to prevent double spending
+    if (userId && used > 0) {
+      await pool.query('UPDATE hd_users SET points = GREATEST(points - $1, 0) WHERE username = $2', [used, userId]);
     }
 
     await pool.query('COMMIT');
@@ -702,7 +712,7 @@ app.put('/api/inquiries/:id', async (req, res) => {
     await pool.query('BEGIN');
 
     // Get existing inquiry
-    const existing = await pool.query('SELECT status, user_id, total_price, payment_status, points_earned FROM hd_inquiries WHERE id = $1', [id]);
+    const existing = await pool.query('SELECT status, user_id, total_price, payment_status, points_earned, points_used FROM hd_inquiries WHERE id = $1', [id]);
     
     if (existing.rows.length === 0) {
       await pool.query('ROLLBACK');
@@ -721,8 +731,15 @@ app.put('/api/inquiries/:id', async (req, res) => {
       }
     }
 
+    // If the order is cancelled, refund used points
+    if (inquiry.status !== 'cancelled' && status === 'cancelled') {
+      if (inquiry.user_id && inquiry.points_used > 0) {
+        await pool.query('UPDATE hd_users SET points = points + $1 WHERE username = $2', [inquiry.points_used, inquiry.user_id]);
+      }
+    }
+
     const result = await pool.query(
-      'UPDATE hd_inquiries SET status = $1, admin_notes = $2, payment_status = $3 WHERE id = $4 RETURNING id, customer_name as "customerName", phone, ritual_type as "ritualType", date, time_slot as "timeSlot", address, address_detail as "addressDetail", special_requests as "specialRequests", customizations, subtractions, total_price as "totalPrice", created_at as "createdAt", status, admin_notes as "adminNotes", payment_method as "paymentMethod", payment_status as "paymentStatus", toss_transaction_id as "tossTransactionId"',
+      'UPDATE hd_inquiries SET status = $1, admin_notes = $2, payment_status = $3 WHERE id = $4 RETURNING id, customer_name as "customerName", phone, ritual_type as "ritualType", date, time_slot as "timeSlot", address, address_detail as "addressDetail", special_requests as "specialRequests", customizations, subtractions, total_price as "totalPrice", created_at as "createdAt", status, admin_notes as "adminNotes", payment_method as "paymentMethod", payment_status as "paymentStatus", toss_transaction_id as "tossTransactionId", user_id as "userId", points_earned as "pointsEarned", points_used as "pointsUsed"',
       [status, adminNotes, newPaymentStatus, id]
     );
 

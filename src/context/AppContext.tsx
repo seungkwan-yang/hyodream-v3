@@ -84,6 +84,7 @@ export interface Inquiry {
   tossTransactionId?: string;
   userId?: string;
   pointsEarned?: number;
+  pointsUsed?: number;
 }
 
 interface AppContextType {
@@ -509,7 +510,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Inquiry booking
-  const addInquiry = (inquiryData: Omit<Inquiry, 'id' | 'createdAt' | 'status'> & { status?: InquiryStatus, paymentMethod?: string, paymentStatus?: 'paid' | 'pending' | 'cancelled', tossTransactionId?: string }) => {
+  const addInquiry = (inquiryData: Omit<Inquiry, 'id' | 'createdAt' | 'status'> & { status?: InquiryStatus, paymentMethod?: string, paymentStatus?: 'paid' | 'pending' | 'cancelled', tossTransactionId?: string, pointsUsed?: number }) => {
     const year = new Date().getFullYear();
     const sequence = String(inquiries.length + 1).padStart(4, '0');
     const newId = `HD-${year}-${sequence}`;
@@ -521,15 +522,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...inquiryData,
       id: newId,
       createdAt,
-      userId: currentUser?.username // attach current user if logged in
+      userId: currentUser?.username, // attach current user if logged in
+      pointsUsed: inquiryData.pointsUsed || 0
     };
 
     setInquiries(prev => [newInquiry, ...prev]);
 
-    // DB에 저장하면서 로그인 유저의 로컬 포인트도 즉시 반영 (결제금액의 1% 적립)
-    if (currentUser && inquiryData.paymentStatus === 'paid') {
-      const pointsEarned = Math.floor(inquiryData.totalPrice * 0.01);
-      setCurrentUser(prev => prev ? { ...prev, points: prev.points + pointsEarned } : prev);
+    // DB에 저장하면서 로그인 유저의 로컬 포인트도 즉시 반영 (선차감 및 적립)
+    if (currentUser) {
+      let pointsChange = 0;
+      if (inquiryData.pointsUsed && inquiryData.pointsUsed > 0) {
+        pointsChange -= inquiryData.pointsUsed;
+      }
+      if (inquiryData.paymentStatus === 'paid') {
+        pointsChange += Math.floor(inquiryData.totalPrice * 0.01);
+      }
+      if (pointsChange !== 0) {
+        setCurrentUser(prev => prev ? { ...prev, points: Math.max(0, prev.points + pointsChange) } : prev);
+      }
     }
 
     fetch(`${API_BASE}/api/inquiries`, {
