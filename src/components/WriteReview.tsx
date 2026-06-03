@@ -5,6 +5,21 @@ import { Star, Camera, CheckCircle2, Sparkles, Trash2, Heart, RefreshCw } from '
 export const WriteReview: React.FC = () => {
   const { currentUser, setCustomerTab } = useApp();
 
+  // Step state: 'form' | 'success'
+  const [step, setStep] = useState<'form' | 'success'>('form');
+
+  // Form Phase States
+  const [title, setTitle] = useState<string>('');
+  const [content, setContent] = useState<string>('');
+  const [packageType, setPackageType] = useState<string>('표준 제사 상차림');
+  const [rating, setRating] = useState<number>(5);
+  const [hoverRating, setHoverRating] = useState<number | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!currentUser) {
       setCustomerTab('login');
@@ -28,20 +43,7 @@ export const WriteReview: React.FC = () => {
 
   }, [currentUser, setCustomerTab]);
 
-  // Step state: 'form' | 'success'
-  const [step, setStep] = useState<'form' | 'success'>('form');
 
-  // Form Phase States
-  const [title, setTitle] = useState<string>('');
-  const [content, setContent] = useState<string>('');
-  const [packageType, setPackageType] = useState<string>('표준 제사 상차림');
-  const [rating, setRating] = useState<number>(5);
-  const [hoverRating, setHoverRating] = useState<number | null>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState<boolean>(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Helper: Mask name (e.g. 공유 -> 공*유, 김철 -> 김*, 남궁철수 -> 남*철수)
   const maskName = (fullName: string) => {

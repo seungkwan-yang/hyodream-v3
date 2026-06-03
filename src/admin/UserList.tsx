@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
 import type { User, InquiryStatus } from '../context/AppContext';
-import { Search, User as UserIcon, Phone, MapPin, Award, X, Calendar, ShoppingBag, Clock, CheckCircle, Truck } from 'lucide-react';
+import { Search, User as UserIcon, Phone, MapPin, Award, X, Calendar, ShoppingBag, Clock, CheckCircle, Truck, Download, Upload } from 'lucide-react';
 
 export const UserList: React.FC = () => {
   const { users, inquiries } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Filter users by name or phone
   const filteredUsers = users.filter(user => {
@@ -18,6 +19,89 @@ export const UserList: React.FC = () => {
       (user.tel && user.tel.includes(term))
     );
   });
+
+  const handleExportCSV = () => {
+    const headers = ['아이디(username)', '이름(name)', '이메일(email)', '연락처(hp)', '보조연락처(tel)', '우편번호(zip)', '기본주소(address1)', '상세주소(address2)', '포인트(points)'];
+    const rows = filteredUsers.map(u => [
+      u.username,
+      u.name,
+      u.email || '',
+      u.hp,
+      u.tel || '',
+      u.zip || '',
+      u.address1 || '',
+      u.address2 || '',
+      u.points || 0
+    ]);
+    
+    let csvContent = '\uFEFF' + headers.join(',') + '\n' 
+      + rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(",")).join("\n");
+      
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `hyodream_users_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target?.result as string;
+        const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+        if (lines.length < 2) return alert('유효한 CSV 데이터가 없습니다.');
+        
+        const parsedUsers = [];
+        for (let i = 1; i < lines.length; i++) {
+          const row = lines[i].match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
+          const cols = row.map(col => col.replace(/^"|"$/g, '').replace(/""/g, '"').trim());
+          
+          if (cols.length >= 4 && cols[0]) {
+            parsedUsers.push({
+              username: cols[0],
+              name: cols[1],
+              email: cols[2] || '',
+              hp: cols[3],
+              tel: cols[4] || '',
+              zip: cols[5] || '',
+              address1: cols[6] || '',
+              address2: cols[7] || '',
+              points: cols[8] ? parseInt(cols[8].replace(/,/g, '')) : 0
+            });
+          }
+        }
+        
+        if (parsedUsers.length === 0) return alert('업로드할 회원 데이터가 없습니다.');
+        if (!window.confirm(`총 ${parsedUsers.length}명의 회원 정보를 DB에 업로드(덮어쓰기) 하시겠습니까?`)) return;
+        
+        const res = await fetch('/api/users/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ users: parsedUsers })
+        });
+        
+        const result = await res.json();
+        if (res.ok) {
+          alert(`성공적으로 ${result.count}명의 정보를 업데이트했습니다. (새로고침 됩니다)`);
+          window.location.reload();
+        } else {
+          alert(`업로드 실패: ${result.error}`);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('CSV 파싱 중 오류가 발생했습니다.');
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   // Get status label
   const getStatusLabel = (status: InquiryStatus) => {
@@ -75,8 +159,17 @@ export const UserList: React.FC = () => {
             style={{ paddingLeft: '42px', borderRadius: '12px', width: '100%' }}
           />
         </div>
-        <div style={{ fontSize: '0.85rem', color: 'var(--color-text-sub)', fontWeight: 600 }}>
-          총 <span style={{ color: 'var(--color-primary)', fontSize: '1rem' }}>{filteredUsers.length}</span>명의 회원
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ fontSize: '0.85rem', color: 'var(--color-text-sub)', fontWeight: 600 }}>
+            총 <span style={{ color: 'var(--color-primary)', fontSize: '1rem' }}>{filteredUsers.length}</span>명의 회원
+          </div>
+          <button onClick={handleExportCSV} className="btn-secondary" style={{ padding: '8px 14px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Download size={14} /> CSV 내보내기
+          </button>
+          <input type="file" accept=".csv" ref={fileInputRef} style={{ display: 'none' }} onChange={handleImportCSV} />
+          <button onClick={() => fileInputRef.current?.click()} className="btn-primary" style={{ padding: '8px 14px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Upload size={14} /> CSV 대량 등록
+          </button>
         </div>
       </div>
 

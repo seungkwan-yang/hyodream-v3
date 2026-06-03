@@ -52,7 +52,7 @@ export const Reviews: React.FC<ReviewsProps> = ({ limit }) => {
     }
   }, [currentPage, sortBy, sortOrder]);
 
-  const fetchReviews = async () => {
+  async function fetchReviews() {
     try {
       setLoading(true);
       const response = await fetch('/api/reviews');

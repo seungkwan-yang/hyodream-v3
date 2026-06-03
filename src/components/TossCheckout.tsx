@@ -69,7 +69,7 @@ export const TossCheckout: React.FC<TossCheckoutProps> = ({
     }
   }, [step]);
 
-  const triggerConfetti = () => {
+  function triggerConfetti() {
     // Elegant left and right spray
     confetti({
       particleCount: 80,
