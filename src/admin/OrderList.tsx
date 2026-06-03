@@ -5,27 +5,38 @@ import type { Inquiry, InquiryStatus } from '../context/AppContext';
 import { Search, Calendar, MapPin, Phone, Edit3, Trash2, Clipboard, X, CheckCircle, Clock, Truck, Award, Download } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
+// Fallback menu list (used when DB data hasn't loaded yet or backend is unavailable)
+const FALLBACK_MENUS = [
+  { id: 'kisso',  name: '소가족 실속상 (기제사 소)', price: 220000 },
+  { id: 'kijung', name: '표준 맞춤상 (기제사 중)',  price: 350000 },
+  { id: 'kidae',  name: '명가 전통상 (기제사 대)',  price: 480000 },
+  { id: 'gosa',   name: '개업 고사상 / 시제상',    price: 290000 },
+];
+
 export const OrderList: React.FC = () => {
-  const { inquiries, updateInquiryStatus, updateInquiryNotes, deleteInquiry, addInquiry } = useApp();
+  const { inquiries, updateInquiryStatus, updateInquiryNotes, deleteInquiry, addInquiry, baseMenus } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [yearMonthFilter, setYearMonthFilter] = useState<string>('all');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>('all');
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
   const [noteText, setNoteText] = useState('');
-  
+
+  // Use DB menus if loaded, otherwise fall back to hardcoded list
+  const effectiveMenus = baseMenus.length > 0 ? baseMenus : FALLBACK_MENUS;
+
   // Add Manual Order States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newOrder, setNewOrder] = useState({
     customerName: '',
     phone: '',
-    ritualType: '효드림 기본 상차림',
+    ritualType: FALLBACK_MENUS[0].name,
     date: new Date().toISOString().split('T')[0],
     timeSlot: '오전 10:00 ~ 오후 12:00',
     address: '',
     addressDetail: '',
     paymentMethod: '무통장 입금',
-    totalPrice: 0,
+    totalPrice: FALLBACK_MENUS[0].price,
     status: 'pending' as InquiryStatus
   });
 
@@ -61,13 +72,13 @@ export const OrderList: React.FC = () => {
     setNewOrder({
       customerName: '',
       phone: '',
-      ritualType: '효드림 기본 상차림',
+      ritualType: effectiveMenus[0]?.name || FALLBACK_MENUS[0].name,
       date: new Date().toISOString().split('T')[0],
       timeSlot: '오전 10:00 ~ 오후 12:00',
       address: '',
       addressDetail: '',
       paymentMethod: '무통장 입금',
-      totalPrice: 0,
+      totalPrice: effectiveMenus[0]?.price || FALLBACK_MENUS[0].price,
       status: 'pending'
     });
   };
@@ -343,7 +354,14 @@ export const OrderList: React.FC = () => {
 
           {/* Add Manual Order Button */}
           <button
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={() => {
+              setNewOrder({
+                ...newOrder,
+                ritualType: baseMenus[0]?.name || '',
+                totalPrice: baseMenus[0]?.price || 0
+              });
+              setIsAddModalOpen(true);
+            }}
             className="btn-primary"
             style={{
               padding: '6px 10px',
@@ -709,12 +727,20 @@ export const OrderList: React.FC = () => {
                   <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-sub)' }}>상차림 종류</label>
                   <select 
                     value={newOrder.ritualType}
-                    onChange={(e) => setNewOrder({...newOrder, ritualType: e.target.value})}
+                    onChange={(e) => {
+                      const selectedName = e.target.value;
+                      const selectedMenu = effectiveMenus.find(m => m.name === selectedName);
+                      setNewOrder({
+                        ...newOrder, 
+                        ritualType: selectedName,
+                        totalPrice: selectedMenu ? selectedMenu.price : newOrder.totalPrice
+                      });
+                    }}
                     style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.9rem' }}
                   >
-                    <option value="효드림 기본 상차림">효드림 기본 상차림</option>
-                    <option value="효드림 프리미엄 상차림">효드림 프리미엄 상차림</option>
-                    <option value="VIP 맞춤 상차림">VIP 맞춤 상차림</option>
+                    {effectiveMenus.map(menu => (
+                      <option key={menu.id} value={menu.name}>{menu.name}</option>
+                    ))}
                   </select>
                 </div>
 
