@@ -17,7 +17,7 @@ import { MyPage } from './components/MyPage';
 import { Phone, MapPin } from 'lucide-react';
 
 const AppContent: React.FC = () => {
-  const { viewMode, customerTab, checkoutIntentStep } = useApp();
+  const { viewMode, customerTab, checkoutIntentStep, isLoading } = useApp();
   
   // Custom Estimator Config selected to proceed to Form
   const [estimatorConfig, setEstimatorConfig] = useState<any>(null);
@@ -26,6 +26,29 @@ const AppContent: React.FC = () => {
   React.useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [customerTab, estimatorConfig]);
+
+  if (isLoading) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        backgroundColor: 'var(--bg-primary)'
+      }}>
+        <div style={{
+          width: '40px', height: '40px', borderRadius: '50%',
+          border: '3px solid var(--border-color)',
+          borderTopColor: 'var(--color-primary)',
+          animation: 'spin 1s linear infinite'
+        }} />
+        <p style={{ marginTop: '16px', color: 'var(--color-text-sub)', fontSize: '0.9rem' }}>
+          효드림 데이터를 준비하고 있습니다...
+        </p>
+      </div>
+    );
+  }
 
   const handleProceedToForm = (config: any) => {
     setEstimatorConfig(config);
