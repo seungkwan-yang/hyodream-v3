@@ -411,17 +411,17 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
                 <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-sub)', display: 'block', marginBottom: '8px' }}>
                   제사/행사 치르는 날짜 선택
                 </label>
-                <div style={{ position: 'relative', width: '100%' }}>
+                <div style={{ position: 'relative', width: '100%', display: 'flex' }}>
                   <Calendar size={18} style={{
                     position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)',
-                    color: 'var(--color-text-muted)', pointerEvents: 'none'
+                    color: 'var(--color-text-muted)', pointerEvents: 'none', zIndex: 1
                   }} />
                   <input
                     type="date"
                     min={getMinDateString()}
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    style={{ paddingLeft: '44px', width: '100%', boxSizing: 'border-box' }}
+                    style={{ paddingLeft: '44px', flex: 1, minWidth: 0, boxSizing: 'border-box', width: '100%' }}
                   />
                 </div>
                 {errors.date && <span style={{ color: 'var(--color-rose)', fontSize: '0.75rem', fontWeight: 600, display: 'block', marginTop: '6px' }}>{errors.date}</span>}
@@ -432,13 +432,15 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
                 <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-sub)', display: 'block', marginBottom: '8px' }}>
                   배송 희망 시간대 선택
                 </label>
-                <select value={timeSlot} onChange={(e) => setTimeSlot(e.target.value)}>
-                  <option value="오전 10:00 ~ 오후 12:00">오전 10:00 ~ 오후 12:00</option>
-                  <option value="오후 12:00 ~ 오후 2:00">오후 12:00 ~ 오후 2:00</option>
-                  <option value="오후 2:00 ~ 오후 4:00">오후 2:00 ~ 오후 4:00</option>
-                  <option value="오후 4:00 ~ 오후 6:00 (제사 전 도착)">오후 4:00 ~ 오후 6:00 (제사 전 권장)</option>
-                  <option value="오후 6:00 ~ 오후 8:00">오후 6:00 ~ 오후 8:00</option>
-                </select>
+                <div style={{ display: 'flex', width: '100%' }}>
+                  <select value={timeSlot} onChange={(e) => setTimeSlot(e.target.value)} style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', width: '100%' }}>
+                    <option value="오전 10:00 ~ 오후 12:00">오전 10:00 ~ 오후 12:00</option>
+                    <option value="오후 12:00 ~ 오후 2:00">오후 12:00 ~ 오후 2:00</option>
+                    <option value="오후 2:00 ~ 오후 4:00">오후 2:00 ~ 오후 4:00</option>
+                    <option value="오후 4:00 ~ 오후 6:00 (제사 전 도착)">오후 4:00 ~ 오후 6:00 (제사 전 권장)</option>
+                    <option value="오후 6:00 ~ 오후 8:00">오후 6:00 ~ 오후 8:00</option>
+                  </select>
+                </div>
               </div>
 
               {/* Address inputs */}
