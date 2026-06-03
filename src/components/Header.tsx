@@ -326,7 +326,9 @@ export const Header: React.FC = () => {
               {[
                 { id: 'dashboard', label: '현황 대시보드' },
                 { id: 'inquiries', label: '주문 및 결제 내역 관리' },
-                { id: 'pricing', label: '메뉴 단가/옵션 관리' }
+                { id: 'users', label: '회원 관리' },
+                { id: 'pricing', label: '메뉴 단가/옵션 관리' },
+                { id: 'settings', label: '테마 설정' }
               ].map(tab => (
                 <button
                   key={tab.id}

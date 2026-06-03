@@ -227,48 +227,52 @@ export const OrderList: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} className="animate-fade-in-up">
       {/* Filtering Control Bar */}
       <div className="glass-panel" style={{
-        padding: '16px 24px',
+        padding: '12px 16px',
         borderRadius: '16px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        gap: '16px',
-        flexWrap: 'wrap'
+        gap: '12px',
+        flexWrap: 'nowrap',
+        overflowX: 'auto',
+        overflowY: 'hidden',
+        width: '100%',
+        boxSizing: 'border-box'
       }}>
         {/* Search */}
-        <div style={{ position: 'relative', flex: '1', minWidth: '260px' }}>
-          <Search size={18} style={{
+        <div style={{ position: 'relative', flex: '1 1 auto', minWidth: '120px', maxWidth: '300px' }}>
+          <Search size={16} style={{
             position: 'absolute',
-            left: '14px',
+            left: '12px',
             top: '50%',
             transform: 'translateY(-50%)',
             color: 'var(--color-text-muted)'
           }} />
           <input
             type="text"
-            placeholder="고객명, 연락처, 배송지 주소로 검색..."
+            placeholder="고객명, 연락처, 주소 검색..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ paddingLeft: '42px', borderRadius: '12px' }}
+            style={{ paddingLeft: '36px', paddingRight: '12px', paddingTop: '8px', paddingBottom: '8px', borderRadius: '8px', fontSize: '0.85rem', width: '100%', boxSizing: 'border-box' }}
           />
         </div>
 
         {/* Filters and Actions */}
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'nowrap', alignItems: 'center' }}>
           {/* Year/Month Dropdown */}
           <select
             value={yearMonthFilter}
             onChange={(e) => setYearMonthFilter(e.target.value)}
             style={{
-              padding: '8px 12px',
+              padding: '6px 8px',
               borderRadius: '8px',
               border: '1px solid var(--border-color)',
-              fontSize: '0.85rem',
+              fontSize: '0.8rem',
               outline: 'none',
               backgroundColor: '#FFF'
             }}
           >
-            <option value="all">전체 기간 (년/월)</option>
+            <option value="all">전체 기간</option>
             {uniqueYearMonths.map(ym => (
               <option key={ym} value={ym}>{ym}</option>
             ))}
@@ -279,18 +283,18 @@ export const OrderList: React.FC = () => {
             value={paymentMethodFilter}
             onChange={(e) => setPaymentMethodFilter(e.target.value)}
             style={{
-              padding: '8px 12px',
+              padding: '6px 8px',
               borderRadius: '8px',
               border: '1px solid var(--border-color)',
-              fontSize: '0.85rem',
+              fontSize: '0.8rem',
               outline: 'none',
               backgroundColor: '#FFF'
             }}
           >
-            <option value="all">전체 결제수단</option>
+            <option value="all">결제수단</option>
             <option value="toss">토스페이</option>
             <option value="card">카드결제</option>
-            <option value="transfer">계좌이체/무통장</option>
+            <option value="transfer">계좌이체</option>
           </select>
 
           {/* Status Filter Dropdown */}
@@ -298,16 +302,16 @@ export const OrderList: React.FC = () => {
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             style={{
-              padding: '8px 12px',
+              padding: '6px 8px',
               borderRadius: '8px',
               border: '1px solid var(--border-color)',
-              fontSize: '0.85rem',
+              fontSize: '0.8rem',
               outline: 'none',
               backgroundColor: '#FFF'
             }}
           >
             <option value="all">전체 상태</option>
-            <option value="pending">접수/입금대기</option>
+            <option value="pending">입금대기</option>
             <option value="approved">결제완료</option>
             <option value="processing">배송준비</option>
             <option value="completed">배송완료</option>
@@ -317,9 +321,9 @@ export const OrderList: React.FC = () => {
           <button
             onClick={handleExportCSV}
             style={{
-              padding: '8px 16px',
+              padding: '6px 10px',
               borderRadius: '8px',
-              fontSize: '0.85rem',
+              fontSize: '0.8rem',
               fontWeight: 600,
               border: '1px solid var(--color-primary)',
               cursor: 'pointer',
@@ -327,12 +331,14 @@ export const OrderList: React.FC = () => {
               color: 'var(--color-primary)',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              transition: 'var(--transition-smooth)'
+              gap: '4px',
+              transition: 'var(--transition-smooth)',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}
           >
-            <Download size={16} />
-            CSV 내보내기
+            <Download size={14} />
+            CSV
           </button>
 
           {/* Add Manual Order Button */}
@@ -340,17 +346,22 @@ export const OrderList: React.FC = () => {
             onClick={() => setIsAddModalOpen(true)}
             className="btn-primary"
             style={{
-              padding: '8px 16px',
+              padding: '6px 10px',
               borderRadius: '8px',
-              fontSize: '0.85rem',
+              fontSize: '0.8rem',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '4px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}
           >
-            <Clipboard size={16} />
-            수동 주문 추가
+            <Clipboard size={14} />
+            수동 추가
           </button>
+          
+          {/* Spacer for horizontal scroll cutoff fix */}
+          <div style={{ width: '4px', flexShrink: 0 }} />
         </div>
       </div>
 

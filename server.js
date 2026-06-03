@@ -365,6 +365,55 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+app.post('/api/users/bulk', async (req, res) => {
+  const users = req.body.users;
+  if (!Array.isArray(users)) {
+    return res.status(400).json({ error: 'Invalid payload, expected array of users' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const defaultPasswordHash = await bcrypt.hash('1234', 10);
+
+    let processedCount = 0;
+    for (const u of users) {
+      if (!u.username || !u.name || !u.hp) continue;
+      
+      const pwdHash = u.password ? await bcrypt.hash(u.password, 10) : defaultPasswordHash;
+      const email = u.email || null;
+      const tel = u.tel || null;
+      const zip = u.zip || null;
+      const address1 = u.address1 || null;
+      const address2 = u.address2 || null;
+      const points = u.points ? parseInt(u.points) : 0;
+      
+      await client.query(`
+        INSERT INTO hd_users (username, password, name, email, hp, tel, zip, address1, address2, points)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ON CONFLICT (username) DO UPDATE 
+        SET name = EXCLUDED.name,
+            email = EXCLUDED.email,
+            hp = EXCLUDED.hp,
+            tel = EXCLUDED.tel,
+            zip = EXCLUDED.zip,
+            address1 = EXCLUDED.address1,
+            address2 = EXCLUDED.address2,
+            points = EXCLUDED.points
+      `, [u.username, pwdHash, u.name, email, u.hp, tel, zip, address1, address2, points]);
+      processedCount++;
+    }
+
+    await client.query('COMMIT');
+    res.json({ success: true, count: processedCount });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
 app.get('/api/users', async (req, res) => {
   try {
     const result = await pool.query(
