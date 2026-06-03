@@ -940,6 +940,50 @@ input:focus, select:focus, textarea:focus {
   background-color: var(--color-primary-fade) !important;
 }
 
+/* Custom responsive classes for Point Input & Grand Total */
+.responsive-point-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+.responsive-point-input {
+  flex: 1;
+  box-sizing: border-box;
+}
+.responsive-point-btn {
+  flex: none;
+  white-space: nowrap;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
+.responsive-grand-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+}
 
-
+@media (max-width: 480px) {
+  .responsive-point-wrap {
+    flex-wrap: wrap;
+  }
+  .responsive-point-input {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  .responsive-point-btn {
+    flex: 1;
+  }
+  
+  .responsive-grand-total {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+  .responsive-grand-total span:first-child {
+    align-self: flex-start;
+  }
+}

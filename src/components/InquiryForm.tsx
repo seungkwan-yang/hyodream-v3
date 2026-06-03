@@ -317,7 +317,7 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
               {/* Points Usage Section */}
               <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '16px', paddingBottom: '16px', borderBottom: '1px solid var(--border-color)' }}>
                 <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>포인트 사용</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '10px' }}>
+                <div className="responsive-point-wrap">
                   <input
                     type="number"
                     min="0"
@@ -335,7 +335,8 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
                     }}
                     placeholder={currentUser ? `보유 포인트: ${currentUser.points.toLocaleString()} P` : "비회원은 사용 불가"}
                     disabled={!currentUser}
-                    style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-color)' }}
+                    className="responsive-point-input"
+                    style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-color)' }}
                   />
                   <button
                     onClick={() => {
@@ -349,7 +350,7 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
                       }
                     }}
                     disabled={!currentUser || !pointsInput}
-                    className="btn-secondary"
+                    className="btn-secondary responsive-point-btn"
                     style={{ padding: '10px 16px', borderRadius: '8px', opacity: !currentUser ? 0.5 : 1, cursor: !currentUser ? 'not-allowed' : 'pointer' }}
                   >
                     적용하기
@@ -361,7 +362,7 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
                         setPointsInput(String(currentUser.points));
                         setAppliedPoints(currentUser.points);
                       }}
-                      className="btn-primary"
+                      className="btn-primary responsive-point-btn"
                       style={{ padding: '10px 16px', borderRadius: '8px' }}
                     >
                       전액 사용
@@ -377,7 +378,7 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
               </div>
 
               {/* Grand Total */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px' }}>
+              <div className="responsive-grand-total">
                 <span className="serif-font" style={{ fontSize: '1.05rem', fontWeight: 700 }}>상차림 최종 결제 금액</span>
                 <span className="serif-font" style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-primary)' }}>
                   {(initialConfig.calculatedTotal - appliedPoints).toLocaleString()}원
