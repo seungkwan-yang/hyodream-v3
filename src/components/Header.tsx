@@ -12,7 +12,9 @@ export const Header: React.FC = () => {
     adminTab,
     setAdminTab,
     addInquiry,
-    inquiries
+    inquiries,
+    currentUser,
+    setCurrentUser
   } = useApp();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -172,6 +174,42 @@ export const Header: React.FC = () => {
 
       {/* Right Mode Controls & Mobile Trigger */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {viewMode === 'customer' && (
+          <div className="pc-auth-buttons" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px', borderRight: '1px solid var(--border-color)', paddingRight: '12px' }}>
+            {currentUser ? (
+              <>
+                <button
+                  onClick={() => handleTabChange('mypage')}
+                  style={{ background: 'none', border: 'none', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', color: 'var(--color-primary)' }}
+                >
+                  마이페이지
+                </button>
+                <button
+                  onClick={() => { setCurrentUser(null); handleTabChange('home'); }}
+                  style={{ background: 'none', border: 'none', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', color: 'var(--color-text-sub)' }}
+                >
+                  로그아웃
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => handleTabChange('login')}
+                  style={{ background: 'none', border: 'none', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', color: 'var(--color-text-sub)' }}
+                >
+                  로그인
+                </button>
+                <button
+                  onClick={() => handleTabChange('register-agreement')}
+                  style={{ background: 'none', border: 'none', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', color: 'var(--color-text-sub)' }}
+                >
+                  회원가입
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
         {viewMode === 'customer' && (
           <button
             onClick={() => handleTabChange('estimator')}

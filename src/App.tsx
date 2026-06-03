@@ -10,10 +10,14 @@ import { Reviews } from './components/Reviews';
 import { WriteReview } from './components/WriteReview';
 import { FloatingCS } from './components/FloatingCS';
 import { AdminDashboard } from './admin/AdminDashboard';
+import { Login } from './components/Login';
+import { RegisterAgreement } from './components/RegisterAgreement';
+import { RegisterForm } from './components/RegisterForm';
+import { MyPage } from './components/MyPage';
 import { Phone, MapPin } from 'lucide-react';
 
 const AppContent: React.FC = () => {
-  const { viewMode, customerTab } = useApp();
+  const { viewMode, customerTab, checkoutIntentStep } = useApp();
   
   // Custom Estimator Config selected to proceed to Form
   const [estimatorConfig, setEstimatorConfig] = useState<any>(null);
@@ -48,6 +52,7 @@ const AppContent: React.FC = () => {
           return (
             <InquiryForm
               initialConfig={estimatorConfig}
+              initialStep={checkoutIntentStep || 1}
               onReset={handleResetEstimator}
             />
           );
@@ -61,6 +66,14 @@ const AppContent: React.FC = () => {
         return <FAQ />;
       case 'write-review':
         return <WriteReview />;
+      case 'login':
+        return <Login />;
+      case 'register-agreement':
+        return <RegisterAgreement />;
+      case 'register-form':
+        return <RegisterForm />;
+      case 'mypage':
+        return <MyPage />;
       default:
         return <HeroSection />;
     }
