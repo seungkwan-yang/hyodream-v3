@@ -10,7 +10,7 @@ interface RegisterFormProps {
 }
 
 export const RegisterForm: React.FC<RegisterFormProps> = ({ isEditMode, initialData, onSuccess, onCancel }) => {
-  const { setCustomerTab, setCurrentUser, currentUser } = useApp();
+  const { setCustomerTab, setCurrentUser } = useApp();
   
   const [formData, setFormData] = useState({
     username: '',

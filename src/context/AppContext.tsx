@@ -13,7 +13,14 @@ export interface User {
   name: string;
   email: string;
   hp: string;
+  tel?: string;
+  zip?: string;
+  address1?: string;
+  address2?: string;
+  mailing?: boolean;
+  sms?: boolean;
   points: number;
+  createdAt?: string;
 }
 
 // Individual dish/item in the catalog

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Star, Camera, CheckCircle2, Sparkles, Trash2, Heart, ArrowRight, RefreshCw } from 'lucide-react';
+import { Star, Camera, CheckCircle2, Sparkles, Trash2, Heart, RefreshCw } from 'lucide-react';
 
 export const WriteReview: React.FC = () => {
   const { currentUser, setCustomerTab } = useApp();

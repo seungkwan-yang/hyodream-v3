@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
-import type { User, Inquiry, InquiryStatus } from '../context/AppContext';
+import type { User, InquiryStatus } from '../context/AppContext';
 import { Search, User as UserIcon, Phone, MapPin, Award, X, Calendar, ShoppingBag, Clock, CheckCircle, Truck } from 'lucide-react';
 
 export const UserList: React.FC = () => {
