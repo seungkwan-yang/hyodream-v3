@@ -7,6 +7,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { Pool } from '@neondatabase/serverless';
 import multer from 'multer';
+import bcrypt from 'bcryptjs';
 
 // Initialize configuration
 dotenv.config();
@@ -84,6 +85,28 @@ async function seedDatabase() {
     
     // 0. Ensure all custom hd_ tables exist (Self-Healing DDL Migration)
     await client.query(`
+      CREATE TABLE IF NOT EXISTS hd_users (
+          id SERIAL PRIMARY KEY,
+          username VARCHAR(50) UNIQUE NOT NULL,
+          password VARCHAR(100) NOT NULL,
+          name VARCHAR(100) NOT NULL,
+          email VARCHAR(100) NOT NULL,
+          hp VARCHAR(50) NOT NULL,
+          tel VARCHAR(50),
+          zip VARCHAR(10),
+          address1 TEXT,
+          address2 TEXT,
+          mailing BOOLEAN DEFAULT TRUE,
+          sms BOOLEAN DEFAULT TRUE,
+          points INTEGER DEFAULT 0 NOT NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Self-healing: make email optional
+    await client.query('ALTER TABLE hd_users ALTER COLUMN email DROP NOT NULL;');
+
+    await client.query(`
       CREATE TABLE IF NOT EXISTS hd_categories (
           id VARCHAR(50) PRIMARY KEY,
           name VARCHAR(100) NOT NULL,
@@ -151,9 +174,14 @@ async function seedDatabase() {
           payment_method VARCHAR(100),
           payment_status VARCHAR(50) DEFAULT 'pending' NOT NULL,
           toss_transaction_id VARCHAR(150),
+          user_id VARCHAR(50),
+          points_earned INTEGER DEFAULT 0,
           db_created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    
+    await client.query('ALTER TABLE hd_inquiries ADD COLUMN IF NOT EXISTS user_id VARCHAR(50);');
+    await client.query('ALTER TABLE hd_inquiries ADD COLUMN IF NOT EXISTS points_earned INTEGER DEFAULT 0;');
     
     console.log('[HyoDream DB Engine] Self-healing tables verified/created.');
     
@@ -277,6 +305,148 @@ async function seedDatabase() {
 }
 
 // REST API 라우트 설계
+
+// 0. Auth & Users
+app.post('/api/auth/register', async (req, res) => {
+  const { username, password, name, email, hp, tel, zip, address1, address2, mailing, sms } = req.body;
+  try {
+    const userCheck = await pool.query('SELECT username FROM hd_users WHERE username = $1', [username]);
+    if (userCheck.rows.length > 0) {
+      return res.status(400).json({ error: '이미 사용중인 아이디입니다.' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const result = await pool.query(
+      `INSERT INTO hd_users (username, password, name, email, hp, tel, zip, address1, address2, mailing, sms) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, username, name, email, hp, tel, zip, address1, address2, mailing, sms, points`,
+      [username, hashedPassword, name, email, hp, tel, zip, address1, address2, mailing, sms]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  const { username, password } = req.body;
+  try {
+    const result = await pool.query('SELECT * FROM hd_users WHERE username = $1', [username]);
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: '존재하지 않는 아이디입니다.' });
+    }
+    
+    const user = result.rows[0];
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: '비밀번호가 일치하지 않습니다.' });
+    }
+
+    res.json({
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      email: user.email,
+      hp: user.hp,
+      tel: user.tel,
+      zip: user.zip,
+      address1: user.address1,
+      address2: user.address2,
+      mailing: user.mailing,
+      sms: user.sms,
+      points: user.points
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/users', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT username, name, email, hp, tel, zip, address1, address2, mailing, sms, points, created_at as "createdAt" FROM hd_users ORDER BY created_at DESC'
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/users/:username', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, username, name, email, hp, tel, zip, address1, address2, mailing, sms, points, created_at FROM hd_users WHERE username = $1', [req.params.username]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/users/:username', async (req, res) => {
+  const { name, email, hp, tel, zip, address1, address2, mailing, sms, password } = req.body;
+  try {
+    let updateQuery = `
+      UPDATE hd_users 
+      SET name = $1, email = $2, hp = $3, tel = $4, zip = $5, address1 = $6, address2 = $7, mailing = $8, sms = $9
+    `;
+    let values = [name, email, hp, tel, zip, address1, address2, mailing, sms, req.params.username];
+    
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      updateQuery += `, password = $11 WHERE username = $10 RETURNING id, username, name, email, hp, tel, zip, address1, address2, mailing, sms, points`;
+      values = [name, email, hp, tel, zip, address1, address2, mailing, sms, req.params.username, hashedPassword];
+    } else {
+      updateQuery += ` WHERE username = $10 RETURNING id, username, name, email, hp, tel, zip, address1, address2, mailing, sms, points`;
+    }
+
+    const result = await pool.query(updateQuery, values);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/users/:username/orders', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM hd_inquiries WHERE user_id = $1 ORDER BY db_created_at DESC', [req.params.username]);
+    const mapped = result.rows.map(row => ({
+      id: row.id,
+      customerName: row.customer_name,
+      phone: row.phone,
+      ritualType: row.ritual_type,
+      date: row.date,
+      timeSlot: row.time_slot,
+      address: row.address,
+      addressDetail: row.address_detail,
+      specialRequests: row.special_requests,
+      customizations: row.customizations,
+      subtractions: row.subtractions,
+      totalPrice: row.total_price,
+      createdAt: row.created_at,
+      status: row.status,
+      adminNotes: row.admin_notes,
+      paymentMethod: row.payment_method,
+      paymentStatus: row.payment_status,
+      tossTransactionId: row.toss_transaction_id,
+      userId: row.user_id,
+      pointsEarned: row.points_earned
+    }));
+    res.json(mapped);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 1. Categories CRUD
 app.get('/api/categories', async (req, res) => {
   try {
@@ -492,7 +662,7 @@ app.delete('/api/custom-options/:id', async (req, res) => {
 // 5. Inquiries CRUD (Orders)
 app.get('/api/inquiries', async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, customer_name as "customerName", phone, ritual_type as "ritualType", date, time_slot as "timeSlot", address, address_detail as "addressDetail", special_requests as "specialRequests", customizations, subtractions, total_price as "totalPrice", created_at as "createdAt", status, admin_notes as "adminNotes", payment_method as "paymentMethod", payment_status as "paymentStatus", toss_transaction_id as "tossTransactionId" FROM hd_inquiries ORDER BY db_created_at DESC');
+    const result = await pool.query('SELECT id, customer_name as "customerName", phone, ritual_type as "ritualType", date, time_slot as "timeSlot", address, address_detail as "addressDetail", special_requests as "specialRequests", customizations, subtractions, total_price as "totalPrice", created_at as "createdAt", status, admin_notes as "adminNotes", payment_method as "paymentMethod", payment_status as "paymentStatus", toss_transaction_id as "tossTransactionId", user_id as "userId", points_earned as "pointsEarned" FROM hd_inquiries ORDER BY db_created_at DESC');
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -500,16 +670,27 @@ app.get('/api/inquiries', async (req, res) => {
 });
 
 app.post('/api/inquiries', async (req, res) => {
-  const { id, customerName, phone, ritualType, date, timeSlot, address, addressDetail, specialRequests, customizations, subtractions, totalPrice, createdAt, status, adminNotes, paymentMethod, paymentStatus, tossTransactionId } = req.body;
+  const { id, customerName, phone, ritualType, date, timeSlot, address, addressDetail, specialRequests, customizations, subtractions, totalPrice, createdAt, status, adminNotes, paymentMethod, paymentStatus, tossTransactionId, userId } = req.body;
   try {
+    const pointsEarned = Math.floor(totalPrice * 0.01);
+
+    await pool.query('BEGIN');
+
     const result = await pool.query(
-      `INSERT INTO hd_inquiries (id, customer_name, phone, ritual_type, date, time_slot, address, address_detail, special_requests, customizations, subtractions, total_price, created_at, status, admin_notes, payment_method, payment_status, toss_transaction_id) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) 
-       RETURNING id, customer_name as "customerName", phone, ritual_type as "ritualType", date, time_slot as "timeSlot", address, address_detail as "addressDetail", special_requests as "specialRequests", customizations, subtractions, total_price as "totalPrice", created_at as "createdAt", status, admin_notes as "adminNotes", payment_method as "paymentMethod", payment_status as "paymentStatus", toss_transaction_id as "tossTransactionId"`,
-      [id, customerName, phone, ritualType, date, timeSlot, address, addressDetail, specialRequests, customizations || [], subtractions || [], totalPrice, createdAt, status || 'pending', adminNotes, paymentMethod, paymentStatus || 'pending', tossTransactionId]
+      `INSERT INTO hd_inquiries (id, customer_name, phone, ritual_type, date, time_slot, address, address_detail, special_requests, customizations, subtractions, total_price, created_at, status, admin_notes, payment_method, payment_status, toss_transaction_id, user_id, points_earned) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) 
+       RETURNING id, customer_name as "customerName", phone, ritual_type as "ritualType", date, time_slot as "timeSlot", address, address_detail as "addressDetail", special_requests as "specialRequests", customizations, subtractions, total_price as "totalPrice", created_at as "createdAt", status, admin_notes as "adminNotes", payment_method as "paymentMethod", payment_status as "paymentStatus", toss_transaction_id as "tossTransactionId", user_id as "userId", points_earned as "pointsEarned"`,
+      [id, customerName, phone, ritualType, date, timeSlot, address, addressDetail, specialRequests, customizations || [], subtractions || [], totalPrice, createdAt, status || 'pending', adminNotes, paymentMethod, paymentStatus || 'pending', tossTransactionId, userId || null, pointsEarned]
     );
+
+    if (userId && (paymentStatus === 'paid')) {
+      await pool.query('UPDATE hd_users SET points = points + $1 WHERE username = $2', [pointsEarned, userId]);
+    }
+
+    await pool.query('COMMIT');
     res.status(201).json(result.rows[0]);
   } catch (err) {
+    await pool.query('ROLLBACK');
     res.status(500).json({ error: err.message });
   }
 });
@@ -518,12 +699,37 @@ app.put('/api/inquiries/:id', async (req, res) => {
   const { id } = req.params;
   const { status, adminNotes } = req.body;
   try {
+    await pool.query('BEGIN');
+
+    // Get existing inquiry
+    const existing = await pool.query('SELECT status, user_id, total_price, payment_status, points_earned FROM hd_inquiries WHERE id = $1', [id]);
+    
+    if (existing.rows.length === 0) {
+      await pool.query('ROLLBACK');
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    const inquiry = existing.rows[0];
+    let newPaymentStatus = inquiry.payment_status;
+
+    // If changing from pending to approved/completed, confirm payment and award points
+    if (inquiry.payment_status === 'pending' && (status === 'approved' || status === 'completed')) {
+      newPaymentStatus = 'paid';
+      if (inquiry.user_id) {
+        const pointsToAward = inquiry.points_earned || Math.floor(inquiry.total_price * 0.01);
+        await pool.query('UPDATE hd_users SET points = points + $1 WHERE username = $2', [pointsToAward, inquiry.user_id]);
+      }
+    }
+
     const result = await pool.query(
-      'UPDATE hd_inquiries SET status = $1, admin_notes = $2 WHERE id = $3 RETURNING id, customer_name as "customerName", phone, ritual_type as "ritualType", date, time_slot as "timeSlot", address, address_detail as "addressDetail", special_requests as "specialRequests", customizations, subtractions, total_price as "totalPrice", created_at as "createdAt", status, admin_notes as "adminNotes", payment_method as "paymentMethod", payment_status as "paymentStatus", toss_transaction_id as "tossTransactionId"',
-      [status, adminNotes, id]
+      'UPDATE hd_inquiries SET status = $1, admin_notes = $2, payment_status = $3 WHERE id = $4 RETURNING id, customer_name as "customerName", phone, ritual_type as "ritualType", date, time_slot as "timeSlot", address, address_detail as "addressDetail", special_requests as "specialRequests", customizations, subtractions, total_price as "totalPrice", created_at as "createdAt", status, admin_notes as "adminNotes", payment_method as "paymentMethod", payment_status as "paymentStatus", toss_transaction_id as "tossTransactionId"',
+      [status, adminNotes, newPaymentStatus, id]
     );
+
+    await pool.query('COMMIT');
     res.json(result.rows[0]);
   } catch (err) {
+    await pool.query('ROLLBACK');
     res.status(500).json({ error: err.message });
   }
 });
@@ -585,11 +791,15 @@ export default app;
 
 // Start listening and seed database, explicitly binding to 0.0.0.0 if not running inside Vercel
 if (!process.env.VERCEL) {
-  app.listen(port, '0.0.0.0', async () => {
+  const srv = app.listen(port, '0.0.0.0', async () => {
     console.log(`[HyoDream Express Server] Live on port ${port} (0.0.0.0)`);
     console.log(`Serving static folder: ${publicDir}`);
     await seedDatabase();
   });
+  srv.on('error', (err) => console.error('[HyoDream Express Server] ERROR:', err));
+  
+  // 방어 코드: 서버가 비정상적으로 이벤트 루프를 비우고 종료되는 현상 방지
+  setInterval(() => {}, 1000 * 60 * 60);
 } else {
   // In Vercel environment, ensure database seeding runs on cold starts
   seedDatabase().catch(err => {

@@ -2,10 +2,19 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 // Type definitions
 export type ViewMode = 'customer' | 'admin';
-export type CustomerTab = 'home' | 'estimator' | 'menu' | 'reviews' | 'faq' | 'write-review';
-export type AdminTab = 'dashboard' | 'inquiries' | 'pricing' | 'settings';
+export type CustomerTab = 'home' | 'estimator' | 'menu' | 'reviews' | 'faq' | 'write-review' | 'login' | 'register-agreement' | 'register-form' | 'mypage';
+export type AdminTab = 'dashboard' | 'inquiries' | 'pricing' | 'settings' | 'users';
 export type ThemeType = 'sage' | 'indigo' | 'burgundy' | 'slate' | 'terracotta';
 export type InquiryStatus = 'pending' | 'approved' | 'processing' | 'completed';
+
+export interface User {
+  id: number;
+  username: string;
+  name: string;
+  email: string;
+  hp: string;
+  points: number;
+}
 
 // Individual dish/item in the catalog
 export interface CatalogItem {
@@ -66,6 +75,8 @@ export interface Inquiry {
   paymentMethod?: string; // e.g. '토스페이', '신용카드(신한)'
   paymentStatus?: 'paid' | 'pending' | 'cancelled';
   tossTransactionId?: string;
+  userId?: string;
+  pointsEarned?: number;
 }
 
 interface AppContextType {
@@ -78,11 +89,20 @@ interface AppContextType {
   theme: ThemeType;
   setTheme: (theme: ThemeType) => void;
   
+  // User Auth
+  currentUser: User | null;
+  setCurrentUser: React.Dispatch<React.SetStateAction<User | null>>;
+  users: User[];
+  
   // Menu Categories
   menuCategories: MenuCategory[];
   addMenuCategory: (category: Omit<MenuCategory, 'id' | 'visible'>) => MenuCategory;
   updateMenuCategory: (id: string, updated: Partial<MenuCategory>) => void;
   deleteMenuCategory: (id: string) => void;
+
+  // Checkout Redirect Intent
+  checkoutIntentStep: number | null;
+  setCheckoutIntentStep: (step: number | null) => void;
   
   // Base Packages
   baseMenus: BaseMenu[];
@@ -131,10 +151,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [customerTab, setCustomerTab] = useState<CustomerTab>('home');
   const [adminTab, setAdminTab] = useState<AdminTab>('dashboard');
   
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem('hd_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
   const [theme, setTheme] = useState<ThemeType>(() => {
     const saved = localStorage.getItem('hyodream_theme');
     return (saved as ThemeType) || 'slate';
   });
+
+  // Checkout redirect step
+  const [checkoutIntentStep, setCheckoutIntentStep] = useState<number | null>(null);
 
   useEffect(() => {
     localStorage.setItem('hyodream_theme', theme);
@@ -146,6 +174,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
   const [customOptions, setCustomOptions] = useState<CustomOption[]>([]);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Load all states from Neon DB API on mount
@@ -154,12 +183,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         setIsLoading(true);
         
-        const [catRes, menuRes, itemRes, optRes, inqRes] = await Promise.all([
+        const [catRes, menuRes, itemRes, optRes, inqRes, userRes] = await Promise.all([
           fetch(`${API_BASE}/api/categories`),
           fetch(`${API_BASE}/api/base-menus`),
           fetch(`${API_BASE}/api/catalog-items`),
           fetch(`${API_BASE}/api/custom-options`),
-          fetch(`${API_BASE}/api/inquiries`)
+          fetch(`${API_BASE}/api/inquiries`),
+          fetch(`${API_BASE}/api/users`)
         ]);
 
         if (catRes.ok) setMenuCategories(await catRes.json());
@@ -167,6 +197,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (itemRes.ok) setCatalogItems(await itemRes.json());
         if (optRes.ok) setCustomOptions(await optRes.json());
         if (inqRes.ok) setInquiries(await inqRes.json());
+        if (userRes.ok) setUsers(await userRes.json());
       } catch (err) {
         console.error('[HyoDream API Fetch] Failed to load data from Neon DB backend:', err);
       } finally {
@@ -181,6 +212,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem('hd_viewMode', viewMode);
   }, [viewMode]);
+
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('hd_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('hd_user');
+    }
+  }, [currentUser]);
 
   // Categories CRUD
   const addMenuCategory = (catData: Omit<MenuCategory, 'id' | 'visible'>) => {
@@ -474,10 +513,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'pending', // default status fallback
       ...inquiryData,
       id: newId,
-      createdAt
+      createdAt,
+      userId: currentUser?.username // attach current user if logged in
     };
 
     setInquiries(prev => [newInquiry, ...prev]);
+
+    // DB에 저장하면서 로그인 유저의 로컬 포인트도 즉시 반영 (결제금액의 1% 적립)
+    if (currentUser && inquiryData.paymentStatus === 'paid') {
+      const pointsEarned = Math.floor(inquiryData.totalPrice * 0.01);
+      setCurrentUser(prev => prev ? { ...prev, points: prev.points + pointsEarned } : prev);
+    }
 
     fetch(`${API_BASE}/api/inquiries`, {
       method: 'POST',
@@ -537,10 +583,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setAdminTab,
         theme,
         setTheme,
+        currentUser,
+        setCurrentUser,
+        users,
         menuCategories,
         addMenuCategory,
         updateMenuCategory,
         deleteMenuCategory,
+        checkoutIntentStep,
+        setCheckoutIntentStep,
         baseMenus,
         updateBaseMenuPrice,
         updateBaseMenuItems,
