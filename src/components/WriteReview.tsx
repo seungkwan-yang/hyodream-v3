@@ -1,25 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Star, Camera, CheckCircle2, Sparkles, Trash2, Heart, ShieldCheck, ArrowRight, RefreshCw } from 'lucide-react';
+import { Star, Camera, CheckCircle2, Sparkles, Trash2, Heart, ArrowRight, RefreshCw } from 'lucide-react';
 
 export const WriteReview: React.FC = () => {
-  const { inquiries, setCustomerTab } = useApp();
+  const { currentUser, setCustomerTab } = useApp();
 
-  // Step state: 'verify' | 'form' | 'success'
-  const [step, setStep] = useState<'verify' | 'form' | 'success'>('verify');
+  useEffect(() => {
+    if (!currentUser) {
+      setCustomerTab('login');
+      return;
+    }
 
-  // 1. Verification Phase States
-  const [custName, setCustName] = useState<string>('');
-  const [custPhone, setCustPhone] = useState<string>('');
-  const [verifyError, setVerifyError] = useState<string | null>(null);
+    const fetchOrders = async () => {
+      try {
+        const res = await fetch(`/api/users/${currentUser.username}/orders`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setPackageType(data[0].ritualType);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch recent orders:', err);
+      }
+    };
+    fetchOrders();
 
-  // Matched Inquiry details auto-bound
-  const [matchedInquiry, setMatchedInquiry] = useState<any>(null);
-  const [computedMaskedName, setComputedMaskedName] = useState<string>('');
+  }, [currentUser, setCustomerTab]);
 
-  // 2. Form Phase States
+  // Step state: 'form' | 'success'
+  const [step, setStep] = useState<'form' | 'success'>('form');
+
+  // Form Phase States
   const [title, setTitle] = useState<string>('');
   const [content, setContent] = useState<string>('');
+  const [packageType, setPackageType] = useState<string>('표준 제사 상차림');
   const [rating, setRating] = useState<number>(5);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -27,24 +42,6 @@ export const WriteReview: React.FC = () => {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-
-  // Helper: Normalize phone numbers for robust matching
-  const normalizePhone = (num: string) => num.replace(/[^0-9]/g, '');
-
-  // Helper: Format phone numbers with hyphens automatically (e.g. 01012345678 -> 010-1234-5678)
-  const formatKoreanPhoneNumber = (value: string) => {
-    const digits = value.replace(/[^0-9]/g, '');
-    const cleanDigits = digits.slice(0, 11);
-    if (cleanDigits.length <= 3) {
-      return cleanDigits;
-    } else if (cleanDigits.length <= 6) {
-      return `${cleanDigits.slice(0, 3)}-${cleanDigits.slice(3)}`;
-    } else if (cleanDigits.length <= 10) {
-      return `${cleanDigits.slice(0, 3)}-${cleanDigits.slice(3, 6)}-${cleanDigits.slice(6)}`;
-    } else {
-      return `${cleanDigits.slice(0, 3)}-${cleanDigits.slice(3, 7)}-${cleanDigits.slice(7)}`;
-    }
-  };
 
   // Helper: Mask name (e.g. 공유 -> 공*유, 김철 -> 김*, 남궁철수 -> 남*철수)
   const maskName = (fullName: string) => {
@@ -57,53 +54,7 @@ export const WriteReview: React.FC = () => {
     return name[0] + '*' + name.substring(2);
   };
 
-  // Helper: Extract Region (e.g. "인천광역시 부평구 평천로..." -> "인천 부평구")
-  const extractRegion = (address: string) => {
-    if (!address) return '';
-    const parts = address.trim().split(/\s+/);
-    if (parts.length >= 2) {
-      const city = parts[0].substring(0, 2); // 인천, 경기, 서울 등
-      const district = parts[1];
-      return `${city} ${district}`;
-    }
-    return '';
-  };
-
-  // Execute verification against App inquiries
-  const handleVerify = (e: React.FormEvent) => {
-    e.preventDefault();
-    setVerifyError(null);
-
-    const nameQuery = custName.trim();
-    const phoneQuery = normalizePhone(custPhone);
-
-    if (!nameQuery || !phoneQuery) {
-      setVerifyError('이름과 전화번호를 모두 입력해 주세요.');
-      return;
-    }
-
-    // Find in context loaded inquiries
-    const matched = inquiries.find(inq => {
-      const normalizedInqPhone = normalizePhone(inq.phone);
-      return inq.customerName.trim() === nameQuery && normalizedInqPhone === phoneQuery;
-    });
-
-    if (!matched) {
-      setVerifyError(
-        '효드림 예약 주문 내역을 찾을 수 없습니다. 이름과 연락처를 다시 확인해 주세요. (가상 시뮬레이션 예약을 먼저 생성하여 테스트하실 수 있습니다.)'
-      );
-      return;
-    }
-
-    // Success! Bind auto-detected properties
-    setMatchedInquiry(matched);
-    const region = extractRegion(matched.address);
-    const masked = maskName(matched.customerName);
-    setComputedMaskedName(region ? `${masked} (${region})` : masked);
-
-    // Proceed to Step 2 Form
-    setStep('form');
-  };
+  const computedMaskedName = currentUser ? maskName(currentUser.name) : '';
 
   // Handle Photo uploading immediately to server.js /api/upload
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -179,7 +130,7 @@ export const WriteReview: React.FC = () => {
       date: today,
       title: title.trim(),
       content: content.trim(),
-      packageType: matchedInquiry ? matchedInquiry.ritualType : '기타 맞춤 상차림',
+      packageType: packageType,
       imageUrl: imageUrl || null
     };
 
@@ -231,144 +182,9 @@ export const WriteReview: React.FC = () => {
       </div>
 
       {/* ---------------------------------------------------- */}
-      {/* STEP 1: VERIFICATION SCREEN */}
-      {/* ---------------------------------------------------- */}
-      {step === 'verify' && (
-        <div className="premium-card korean-border-box" style={{
-          padding: '40px 32px',
-          backgroundColor: '#FFFFFF',
-          borderRadius: '16px',
-          boxShadow: 'var(--shadow-md)'
-        }}>
-          <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-            <div style={{
-              width: '60px',
-              height: '60px',
-              borderRadius: '50%',
-              backgroundColor: 'rgba(82, 110, 84, 0.1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 16px auto',
-              color: 'var(--color-primary)'
-            }}>
-              <ShieldCheck size={30} />
-            </div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text-main)' }}>예약 내역 본인 인증</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--color-text-sub)', marginTop: '6px' }}>
-              주문서에 입력하셨던 성함과 휴대전화 번호를 입력해 주십시오.
-            </p>
-          </div>
-
-          <form onSubmit={handleVerify} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div>
-              <label htmlFor="custName" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '8px' }}>
-                예약자 성함
-              </label>
-              <input
-                id="custName"
-                type="text"
-                value={custName}
-                onChange={(e) => setCustName(e.target.value)}
-                placeholder="예: 공유"
-                style={{
-                  width: '100%',
-                  padding: '14px 18px',
-                  borderRadius: '10px',
-                  border: '1.5px solid var(--border-color)',
-                  outline: 'none',
-                  fontSize: '0.9rem',
-                  fontFamily: 'inherit',
-                  transition: 'var(--transition-smooth)'
-                }}
-                onFocus={(e) => e.target.style.borderColor = 'var(--color-primary)'}
-                onBlur={(e) => e.target.style.borderColor = 'var(--border-color)'}
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="custPhone" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '8px' }}>
-                연락처 (휴대전화 번호)
-              </label>
-              <input
-                id="custPhone"
-                type="tel"
-                inputMode="numeric"
-                value={custPhone}
-                onChange={(e) => setCustPhone(formatKoreanPhoneNumber(e.target.value))}
-                placeholder="예: 010-5678-1234"
-                style={{
-                  width: '100%',
-                  padding: '14px 18px',
-                  borderRadius: '10px',
-                  border: '1.5px solid var(--border-color)',
-                  outline: 'none',
-                  fontSize: '0.9rem',
-                  fontFamily: 'inherit',
-                  transition: 'var(--transition-smooth)'
-                }}
-                onFocus={(e) => e.target.style.borderColor = 'var(--color-primary)'}
-                onBlur={(e) => e.target.style.borderColor = 'var(--border-color)'}
-                required
-              />
-            </div>
-
-            {verifyError && (
-              <div style={{
-                padding: '14px 18px',
-                borderRadius: '10px',
-                backgroundColor: 'rgba(227, 176, 152, 0.15)',
-                border: '1px solid var(--color-rose)',
-                color: '#A04E3A',
-                fontSize: '0.8rem',
-                lineHeight: 1.6
-              }}>
-                {verifyError}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className="btn-primary"
-              style={{
-                width: '100%',
-                padding: '16px',
-                fontSize: '0.95rem',
-                fontWeight: 700,
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                cursor: 'pointer',
-                marginTop: '10px'
-              }}
-            >
-              이용 내역 인증하기 <ArrowRight size={16} />
-            </button>
-          </form>
-
-          <div style={{
-            marginTop: '28px',
-            padding: '16px 20px',
-            borderRadius: '10px',
-            backgroundColor: 'var(--bg-secondary)',
-            border: '1px solid var(--border-color)',
-            fontSize: '0.8rem',
-            color: 'var(--color-text-sub)',
-            lineHeight: 1.6
-          }}>
-            <strong>💡 테스트 안내</strong><br />
-            아직 예약이 없으신가요? 화면 우측 상단의 <strong>[관리자 모드 전환]</strong> 클릭 후 모바일 메뉴 또는 예약 대시보드에서 <strong>'가상 주문 시뮬레이션 실행'</strong> 버튼을 클릭하시면 즉시 예약(예: 공유, 010-5678-1234 등)이 무작위 생성되어 편리하게 인증 테스트를 하실 수 있습니다!
-          </div>
-        </div>
-      )}
-
-      {/* ---------------------------------------------------- */}
       {/* STEP 2: REVIEW SUBMISSION FORM SCREEN */}
       {/* ---------------------------------------------------- */}
-      {step === 'form' && matchedInquiry && (
+      {step === 'form' && currentUser && (
         <div className="premium-card korean-border-box" style={{
           padding: '40px 32px',
           backgroundColor: '#FFFFFF',
@@ -386,13 +202,23 @@ export const WriteReview: React.FC = () => {
             border: '1px solid var(--border-color)',
             marginBottom: '32px'
           }}>
-            <div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 600, display: 'block' }}>인증 고객명 (자동 마스킹 지역 연동)</span>
+            <div style={{ flex: 1 }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 600, display: 'block' }}>작성자 (자동 마스킹)</span>
               <strong style={{ fontSize: '1rem', color: 'var(--color-primary-dark)' }}>{computedMaskedName}</strong>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 600, display: 'block' }}>이용 상품 (자동 바인딩)</span>
-              <strong style={{ fontSize: '0.9rem', color: 'var(--color-text-main)' }}>{matchedInquiry.ritualType}</strong>
+            <div style={{ flex: 1 }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>이용 상품</span>
+              <select 
+                value={packageType} 
+                onChange={(e) => setPackageType(e.target.value)}
+                style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid var(--border-color)' }}
+              >
+                <option value="표준 제사 상차림">표준 제사 상차림</option>
+                <option value="프리미엄 제사 상차림">프리미엄 제사 상차림</option>
+                <option value="명품 제사 상차림">명품 제사 상차림</option>
+                <option value="기일/기제사 상차림">기일/기제사 상차림</option>
+                <option value="차례상 (명절용)">차례상 (명절용)</option>
+              </select>
             </div>
           </div>
 
@@ -610,23 +436,6 @@ export const WriteReview: React.FC = () => {
 
             {/* Action Buttons */}
             <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
-              <button
-                type="button"
-                onClick={() => setStep('verify')}
-                disabled={isSubmitting}
-                className="btn-secondary"
-                style={{
-                  flex: 1,
-                  padding: '16px',
-                  borderRadius: '12px',
-                  fontWeight: 700,
-                  fontSize: '0.95rem',
-                  cursor: 'pointer',
-                  borderColor: 'var(--border-color)'
-                }}
-              >
-                이전으로
-              </button>
               <button
                 type="submit"
                 disabled={isSubmitting}

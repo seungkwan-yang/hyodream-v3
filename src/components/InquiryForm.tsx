@@ -13,12 +13,14 @@ interface InquiryFormProps {
     calculatedTotal: number;
   };
   onReset: () => void;
+  initialStep?: number;
 }
 
-export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset }) => {
-  const { addInquiry } = useApp();
-  const [step, setStep] = useState(1);
+export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset, initialStep = 1 }) => {
+  const { addInquiry, currentUser, setCustomerTab, setCheckoutIntentStep } = useApp();
+  const [step, setStep] = useState(initialStep);
   const [showTossModal, setShowTossModal] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   // Auto-scroll to top smoothly whenever the wizard step or the payment modal changes (essential for mobile payments UX)
   React.useEffect(() => {
@@ -35,6 +37,18 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
+
+  // Auto-fill user info if logged in
+  React.useEffect(() => {
+    if (currentUser) {
+      if (!customerName) setCustomerName(currentUser.name || '');
+      if (!phone) setPhone(currentUser.hp || '');
+      if (!address && currentUser.address1) {
+        setAddress(`(${currentUser.zip || ''}) ${currentUser.address1}`);
+        setAddressDetail(currentUser.address2 || '');
+      }
+    }
+  }, [currentUser]);
   
   // Helper: Format phone numbers with hyphens automatically (e.g. 01012345678 -> 010-1234-5678)
   const formatKoreanPhoneNumber = (value: string) => {
@@ -102,6 +116,15 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
   const handleNextStep = () => {
     const newErrors: Record<string, string> = {};
 
+    if (step === 1) {
+      if (!currentUser) {
+        setShowLoginPrompt(true);
+        return;
+      }
+      setStep(2);
+      return;
+    }
+
     if (step === 2) {
       if (!date) newErrors.date = '제사/행사 날짜를 반드시 지정해 주세요.';
       if (!address) newErrors.address = '배송지 기본 주소를 기입해 주세요.';
@@ -143,6 +166,10 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
     const customizations = initialConfig.selectedAdditions.map(a => a.name);
     const subtractions = initialConfig.selectedSubtractions.map(s => s.name);
 
+    const isPendingMethod = paymentMethod.includes('가상계좌') || paymentMethod.includes('무통장');
+    const initialStatus = isPendingMethod ? 'pending' : 'approved';
+    const initialPaymentStatus = isPendingMethod ? 'pending' : 'paid';
+
     // Save paid order to global context
     const order = addInquiry({
       customerName,
@@ -156,9 +183,9 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
       customizations,
       subtractions,
       totalPrice: initialConfig.calculatedTotal,
-      status: 'approved', // Pre-approve paid orders
+      status: initialStatus,
       paymentMethod,
-      paymentStatus: 'paid',
+      paymentStatus: initialPaymentStatus,
       tossTransactionId: transactionId
     });
 
@@ -628,7 +655,50 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
         )}
 
       </div>
-      
+
+      {/* Login / Guest Selection Modal */}
+      {showLoginPrompt && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+        }}>
+          <div className="premium-card animate-scale-up" style={{
+            backgroundColor: '#FFF', padding: '40px', borderRadius: '24px', width: '90%', maxWidth: '400px',
+            textAlign: 'center', boxShadow: 'var(--shadow-lg)'
+          }}>
+            <h3 className="serif-font" style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '16px' }}>주문 진행 안내</h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--color-text-sub)', marginBottom: '32px', lineHeight: 1.6 }}>
+              로그인 후 주문하시면 배송 정보가 자동으로 입력되며, <br/>다양한 포인트 적립 혜택을 받으실 수 있습니다.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button 
+                className="btn-primary" 
+                onClick={() => {
+                  setCheckoutIntentStep(2);
+                  setCustomerTab('login');
+                }}
+                style={{ padding: '16px', borderRadius: '12px', fontWeight: 700, fontSize: '1rem' }}
+              >
+                <User size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                로그인 후 주문하기
+              </button>
+              <button 
+                className="btn-secondary" 
+                onClick={() => {
+                  setShowLoginPrompt(false);
+                  setStep(2);
+                }}
+                style={{ padding: '16px', borderRadius: '12px', fontWeight: 600, fontSize: '1rem', borderColor: 'var(--border-color)' }}
+              >
+                비회원 주문하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TOSS PAYMENTS MODAL */}
       {showTossModal && (
         <TossCheckout
           amount={initialConfig.calculatedTotal}
