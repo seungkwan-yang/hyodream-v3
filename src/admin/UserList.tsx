@@ -414,7 +414,14 @@ export const UserList: React.FC = () => {
                           <div className="responsive-form-grid-1-1">
                             <select
                               value={orderDraft.status || 'pending'}
-                              onChange={(e) => setOrderDraft(prev => ({ ...prev, status: e.target.value as InquiryStatus }))}
+                              onChange={(e) => {
+                                const nextStatus = e.target.value as InquiryStatus;
+                                setOrderDraft(prev => ({
+                                  ...prev,
+                                  status: nextStatus,
+                                  paymentStatus: nextStatus === 'cancelled' ? 'cancelled' : prev.paymentStatus
+                                }));
+                              }}
                             >
                               {(['pending', 'approved', 'processing', 'completed', 'cancelled'] as InquiryStatus[]).map(status => (
                                 <option key={status} value={status}>{getStatusLabel(status)}</option>
@@ -422,7 +429,14 @@ export const UserList: React.FC = () => {
                             </select>
                             <select
                               value={orderDraft.paymentStatus || 'pending'}
-                              onChange={(e) => setOrderDraft(prev => ({ ...prev, paymentStatus: e.target.value as Inquiry['paymentStatus'] }))}
+                              onChange={(e) => {
+                                const nextPaymentStatus = e.target.value as Inquiry['paymentStatus'];
+                                setOrderDraft(prev => ({
+                                  ...prev,
+                                  paymentStatus: nextPaymentStatus,
+                                  status: nextPaymentStatus === 'cancelled' ? 'cancelled' : prev.status
+                                }));
+                              }}
                             >
                               <option value="pending">결제대기</option>
                               <option value="paid">결제완료</option>

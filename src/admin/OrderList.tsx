@@ -572,7 +572,7 @@ export const OrderList: React.FC = () => {
                 }}>
                   <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>진행 상태 설정:</span>
                   <div style={{ display: 'flex', gap: '4px' }}>
-                    {(['pending', 'approved', 'processing', 'completed'] as InquiryStatus[]).map(st => (
+                    {(['pending', 'approved', 'processing', 'completed', 'cancelled'] as InquiryStatus[]).map(st => (
                       <button
                         key={st}
                         onClick={() => handleStatusChange(selectedInquiry.id, st)}

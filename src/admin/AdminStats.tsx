@@ -22,7 +22,7 @@ export const AdminStats: React.FC = () => {
   const completedCount = filteredInquiries.filter(i => i.status === 'completed').length;
   
   const totalRevenue = filteredInquiries
-    .filter(i => i.paymentStatus === 'paid' || i.status !== 'pending') // Count paid orders
+    .filter(i => i.paymentStatus === 'paid')
     .reduce((sum, item) => sum + item.totalPrice, 0);
 
   const conversionRate = totalInquiries > 0 

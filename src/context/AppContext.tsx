@@ -227,6 +227,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return latest as Inquiry[];
   };
 
+  const refreshUsers = async () => {
+    const res = await fetch(`${API_BASE}/api/users`);
+    if (!res.ok) {
+      throw new Error('회원 목록 새로고침 실패');
+    }
+    const latest = await res.json();
+    setUsers(latest);
+    return latest as User[];
+  };
+
   // Save viewMode locally for layout conveniences
   useEffect(() => {
     localStorage.setItem('hd_viewMode', viewMode);
@@ -584,6 +594,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const saved = await res.json();
       setInquiries(prev => prev.map(item => (item.id === id ? saved : item)));
       await refreshInquiries().catch(err => console.error('[HyoDream DB Sync] refreshInquiries failed:', err));
+      await refreshUsers().catch(err => console.error('[HyoDream DB Sync] refreshUsers failed:', err));
       return saved;
     } catch (err) {
       setInquiries(prev => prev.map(item => (item.id === id ? base : item)));
@@ -613,6 +624,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const saved = await res.json();
       setInquiries(prev => prev.map(item => (item.id === id ? saved : item)));
       await refreshInquiries().catch(err => console.error('[HyoDream DB Sync] refreshInquiries failed:', err));
+      await refreshUsers().catch(err => console.error('[HyoDream DB Sync] refreshUsers failed:', err));
       return saved;
     } catch (err) {
       setInquiries(prev => prev.map(item => (item.id === id ? base : item)));
@@ -643,6 +655,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const saved = await res.json();
       setInquiries(prev => prev.map(item => (item.id === id ? saved : item)));
       await refreshInquiries().catch(err => console.error('[HyoDream DB Sync] refreshInquiries failed:', err));
+      await refreshUsers().catch(err => console.error('[HyoDream DB Sync] refreshUsers failed:', err));
       return saved;
     } catch (err) {
       setInquiries(prev => prev.map(item => (item.id === id ? base : item)));
@@ -651,12 +664,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const deleteInquiry = (id: string) => {
+  const deleteInquiry = async (id: string) => {
+    const previous = inquiries;
     setInquiries(prev => prev.filter(item => item.id !== id));
 
-    fetch(`${API_BASE}/api/inquiries/${id}`, {
-      method: 'DELETE'
-    }).catch(err => console.error('[HyoDream DB Sync] deleteInquiry failed:', err));
+    try {
+      const res = await fetch(`${API_BASE}/api/inquiries/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (!res.ok) {
+        throw new Error((await res.json().catch(() => null))?.error || '주문 삭제 실패');
+      }
+
+      await refreshInquiries().catch(err => console.error('[HyoDream DB Sync] refreshInquiries failed:', err));
+      await refreshUsers().catch(err => console.error('[HyoDream DB Sync] refreshUsers failed:', err));
+    } catch (err) {
+      setInquiries(previous);
+      console.error('[HyoDream DB Sync] deleteInquiry failed:', err);
+    }
   };
 
   return (

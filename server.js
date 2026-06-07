@@ -796,28 +796,41 @@ app.put('/api/inquiries/:id', async (req, res) => {
     }
 
     const inquiry = existing.rows[0];
-    let newPaymentStatus = inquiry.payment_status;
-    const nextStatus = status || inquiry.status;
+    let newPaymentStatus = paymentStatus || inquiry.payment_status;
+    let nextStatus = status || inquiry.status;
     const nextTotalPrice = Number(totalPrice ?? inquiry.total_price);
     const nextPointsEarned = Math.floor(nextTotalPrice * 0.01);
+    const nextUserId = userId ?? inquiry.user_id;
+    const previousPointsEarned = inquiry.points_earned || Math.floor(Number(inquiry.total_price || 0) * 0.01);
+    let nextPointsUsed = pointsUsed ?? inquiry.points_used ?? 0;
+
+    if (newPaymentStatus === 'cancelled') {
+      nextStatus = 'cancelled';
+    }
 
     // If changing from pending to approved/completed, confirm payment and award points
-    if (inquiry.payment_status === 'pending' && (nextStatus === 'approved' || nextStatus === 'completed')) {
+    if (newPaymentStatus !== 'cancelled' && inquiry.payment_status !== 'paid' && (nextStatus === 'approved' || nextStatus === 'completed')) {
       newPaymentStatus = 'paid';
-      if (inquiry.user_id) {
-        const pointsToAward = inquiry.points_earned || nextPointsEarned;
-        await pool.query('UPDATE hd_users SET points = points + $1 WHERE username = $2', [pointsToAward, inquiry.user_id]);
+      if (nextUserId) {
+        await pool.query('UPDATE hd_users SET points = points + $1 WHERE username = $2', [nextPointsEarned, nextUserId]);
       }
     }
 
-    // If the order is cancelled, refund used points
-    if (inquiry.status !== 'cancelled' && nextStatus === 'cancelled') {
-      if (inquiry.user_id && inquiry.points_used > 0) {
-        await pool.query('UPDATE hd_users SET points = points + $1 WHERE username = $2', [inquiry.points_used, inquiry.user_id]);
-      }
+    if (nextStatus === 'cancelled') {
       newPaymentStatus = 'cancelled';
-    } else if (paymentStatus) {
-      newPaymentStatus = paymentStatus;
+    }
+
+    // If payment is cancelled after points were awarded, remove the earned points.
+    if (inquiry.payment_status === 'paid' && newPaymentStatus !== 'paid' && nextUserId && previousPointsEarned > 0) {
+      await pool.query('UPDATE hd_users SET points = GREATEST(points - $1, 0) WHERE username = $2', [previousPointsEarned, nextUserId]);
+    }
+
+    // If the order is newly cancelled, refund used points once.
+    if (inquiry.status !== 'cancelled' && nextStatus === 'cancelled') {
+      if (nextUserId && inquiry.points_used > 0) {
+        await pool.query('UPDATE hd_users SET points = points + $1 WHERE username = $2', [inquiry.points_used, nextUserId]);
+      }
+      nextPointsUsed = inquiry.points_used || 0;
     }
 
     const result = await pool.query(
@@ -860,9 +873,9 @@ app.put('/api/inquiries/:id', async (req, res) => {
         paymentMethod ?? inquiry.payment_method,
         newPaymentStatus,
         tossTransactionId ?? inquiry.toss_transaction_id,
-        userId ?? inquiry.user_id,
+        nextUserId,
         nextPointsEarned,
-        pointsUsed ?? inquiry.points_used ?? 0,
+        nextPointsUsed,
         id
       ]
     );
@@ -878,9 +891,33 @@ app.put('/api/inquiries/:id', async (req, res) => {
 app.delete('/api/inquiries/:id', async (req, res) => {
   const { id } = req.params;
   try {
+    await pool.query('BEGIN');
+
+    const existing = await pool.query('SELECT * FROM hd_inquiries WHERE id = $1', [id]);
+    if (existing.rows.length === 0) {
+      await pool.query('ROLLBACK');
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    const inquiry = existing.rows[0];
+    if (inquiry.user_id) {
+      if (inquiry.payment_status === 'paid') {
+        const pointsToDeduct = inquiry.points_earned || Math.floor(Number(inquiry.total_price || 0) * 0.01);
+        if (pointsToDeduct > 0) {
+          await pool.query('UPDATE hd_users SET points = GREATEST(points - $1, 0) WHERE username = $2', [pointsToDeduct, inquiry.user_id]);
+        }
+      }
+
+      if (inquiry.status !== 'cancelled' && inquiry.points_used > 0) {
+        await pool.query('UPDATE hd_users SET points = points + $1 WHERE username = $2', [inquiry.points_used, inquiry.user_id]);
+      }
+    }
+
     await pool.query('DELETE FROM hd_inquiries WHERE id = $1', [id]);
+    await pool.query('COMMIT');
     res.json({ success: true });
   } catch (err) {
+    await pool.query('ROLLBACK');
     res.status(500).json({ error: err.message });
   }
 });

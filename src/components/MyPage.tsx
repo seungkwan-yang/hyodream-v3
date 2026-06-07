@@ -82,6 +82,17 @@ export const MyPage: React.FC = () => {
     setIsEditing(false);
   };
 
+  const getOrderStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending': return '접수대기';
+      case 'approved': return '예약확정';
+      case 'processing': return '준비중';
+      case 'completed': return '완료';
+      case 'cancelled': return '주문취소';
+      default: return status;
+    }
+  };
+
   useEffect(() => {
     if (!currentUser) return;
 
@@ -468,12 +479,10 @@ export const MyPage: React.FC = () => {
                         borderRadius: '20px',
                         fontSize: '0.8rem',
                         fontWeight: 600,
-                        backgroundColor: order.status === 'completed' ? '#DCFCE7' : '#FEF3C7',
-                        color: order.status === 'completed' ? '#166534' : '#92400E'
+                        backgroundColor: order.status === 'completed' ? '#DCFCE7' : order.status === 'cancelled' ? '#FEE2E2' : '#FEF3C7',
+                        color: order.status === 'completed' ? '#166534' : order.status === 'cancelled' ? '#991B1B' : '#92400E'
                       }}>
-                        {order.status === 'pending' ? '접수대기' :
-                         order.status === 'approved' ? '예약확정' :
-                         order.status === 'processing' ? '준비중' : '완료'}
+                        {getOrderStatusLabel(order.status)}
                       </span>
                     </td>
                   </tr>
