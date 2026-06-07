@@ -3,11 +3,13 @@ import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
 import type { User, Inquiry, InquiryStatus } from '../context/AppContext';
 import { Search, User as UserIcon, Phone, MapPin, Award, X, Calendar, ShoppingBag, Clock, CheckCircle, Truck, Download, Upload, Pencil, Save, Trash2 } from 'lucide-react';
+import { OrderEditorModal } from './OrderEditorModal';
 
 export const UserList: React.FC = () => {
   const { users, inquiries, updateInquiry, deleteInquiry } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Inquiry | null>(null);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
   const [orderDraft, setOrderDraft] = useState<Partial<Inquiry>>({});
@@ -138,8 +140,7 @@ export const UserList: React.FC = () => {
   };
 
   const startEditOrder = (order: Inquiry) => {
-    setEditingOrderId(order.id);
-    setOrderDraft({ ...order });
+    setSelectedOrder(order);
   };
 
   const cancelEditOrder = () => {
@@ -291,6 +292,14 @@ export const UserList: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* User Detail Modal */}
+      {selectedOrder && (
+        <OrderEditorModal
+          order={selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+        />
+      )}
 
       {/* User Detail Modal */}
       {selectedUser && createPortal(
