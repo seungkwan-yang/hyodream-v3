@@ -5,7 +5,7 @@ export type ViewMode = 'customer' | 'admin';
 export type CustomerTab = 'home' | 'estimator' | 'menu' | 'reviews' | 'faq' | 'write-review' | 'login' | 'register-agreement' | 'register-form' | 'mypage';
 export type AdminTab = 'dashboard' | 'inquiries' | 'reviews' | 'pricing' | 'settings' | 'users';
 export type ThemeType = 'sage' | 'indigo' | 'burgundy' | 'slate' | 'terracotta';
-export type InquiryStatus = 'pending' | 'approved' | 'processing' | 'completed';
+export type InquiryStatus = 'pending' | 'approved' | 'processing' | 'completed' | 'cancelled';
 
 export interface User {
   id: number;
@@ -138,6 +138,7 @@ interface AppContextType {
   // Inquiries
   inquiries: Inquiry[];
   addInquiry: (inquiry: Omit<Inquiry, 'id' | 'createdAt' | 'status'> & { status?: InquiryStatus, paymentMethod?: string, paymentStatus?: 'paid' | 'pending' | 'cancelled', tossTransactionId?: string }) => Inquiry;
+  updateInquiry: (id: string, updated: Partial<Inquiry>) => void;
   updateInquiryStatus: (id: string, status: InquiryStatus) => void;
   updateInquiryNotes: (id: string, notes: string) => void;
   deleteInquiry: (id: string) => void;
@@ -566,6 +567,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const updateInquiry = (id: string, updated: Partial<Inquiry>) => {
+    let mergedPayload: Inquiry | null = null;
+    setInquiries(prev =>
+      prev.map(item => {
+        if (item.id !== id) return item;
+        mergedPayload = { ...item, ...updated };
+        return mergedPayload;
+      })
+    );
+
+    const base = inquiries.find(i => i.id === id);
+    const payload = mergedPayload || (base ? { ...base, ...updated } : null);
+    if (payload) {
+      fetch(`${API_BASE}/api/inquiries/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(async res => {
+          if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || '주문 수정 실패');
+          return res.json();
+        })
+        .then(saved => {
+          setInquiries(prev => prev.map(item => (item.id === id ? saved : item)));
+        })
+        .catch(err => console.error('[HyoDream DB Sync] updateInquiry failed:', err));
+    }
+  };
+
   const updateInquiryNotes = (id: string, notes: string) => {
     setInquiries(prev =>
       prev.map(item => (item.id === id ? { ...item, adminNotes: notes } : item))
@@ -628,6 +658,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateCustomOptionPrice,
         inquiries,
         addInquiry,
+        updateInquiry,
         updateInquiryStatus,
         updateInquiryNotes,
         deleteInquiry,

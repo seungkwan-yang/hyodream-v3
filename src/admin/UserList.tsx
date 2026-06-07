@@ -1,13 +1,15 @@
 import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
-import type { User, InquiryStatus } from '../context/AppContext';
-import { Search, User as UserIcon, Phone, MapPin, Award, X, Calendar, ShoppingBag, Clock, CheckCircle, Truck, Download, Upload } from 'lucide-react';
+import type { User, Inquiry, InquiryStatus } from '../context/AppContext';
+import { Search, User as UserIcon, Phone, MapPin, Award, X, Calendar, ShoppingBag, Clock, CheckCircle, Truck, Download, Upload, Pencil, Save, Trash2 } from 'lucide-react';
 
 export const UserList: React.FC = () => {
-  const { users, inquiries } = useApp();
+  const { users, inquiries, updateInquiry, deleteInquiry } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+  const [orderDraft, setOrderDraft] = useState<Partial<Inquiry>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Filter users by name or phone
@@ -110,6 +112,7 @@ export const UserList: React.FC = () => {
       case 'approved': return '결제완료';
       case 'processing': return '배송준비';
       case 'completed': return '배송완료';
+      case 'cancelled': return '주문취소';
     }
   };
 
@@ -120,6 +123,7 @@ export const UserList: React.FC = () => {
       case 'approved': return <CheckCircle size={14} />;
       case 'processing': return <Truck size={14} />;
       case 'completed': return <Award size={14} />;
+      case 'cancelled': return <X size={14} />;
     }
   };
 
@@ -130,6 +134,37 @@ export const UserList: React.FC = () => {
       const dateB = new Date(b.createdAt || b.date).getTime();
       return dateB - dateA;
     });
+  };
+
+  const startEditOrder = (order: Inquiry) => {
+    setEditingOrderId(order.id);
+    setOrderDraft({ ...order });
+  };
+
+  const cancelEditOrder = () => {
+    setEditingOrderId(null);
+    setOrderDraft({});
+  };
+
+  const saveOrder = (orderId: string) => {
+    const totalPrice = Number(orderDraft.totalPrice || 0);
+    if (!orderDraft.customerName?.trim()) return alert('고객명을 입력해 주세요.');
+    if (!orderDraft.phone?.trim()) return alert('연락처를 입력해 주세요.');
+    if (!orderDraft.ritualType?.trim()) return alert('주문상품을 입력해 주세요.');
+    if (Number.isNaN(totalPrice) || totalPrice < 0) return alert('결제금액을 올바르게 입력해 주세요.');
+
+    updateInquiry(orderId, {
+      ...orderDraft,
+      totalPrice,
+      pointsEarned: Math.floor(totalPrice * 0.01)
+    });
+    setEditingOrderId(null);
+    setOrderDraft({});
+  };
+
+  const removeOrder = (order: Inquiry) => {
+    if (!window.confirm(`${order.customerName}님의 주문 ${order.id}을 삭제할까요? 삭제된 주문 이력은 복구할 수 없습니다.`)) return;
+    deleteInquiry(order.id);
   };
 
   return (
@@ -184,7 +219,7 @@ export const UserList: React.FC = () => {
                 <th style={{ padding: '16px 20px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-sub)' }}>연락처</th>
                 <th style={{ padding: '16px 20px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-sub)' }}>보유 포인트</th>
                 <th style={{ padding: '16px 20px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-sub)' }}>누적 주문 건수</th>
-                <th style={{ padding: '16px 20px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-sub)', textAlign: 'center' }}>상세 보기</th>
+                <th style={{ padding: '16px 20px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-sub)', textAlign: 'center' }}>주문 이력 편집</th>
               </tr>
             </thead>
             <tbody>
@@ -218,7 +253,10 @@ export const UserList: React.FC = () => {
                       </td>
                       <td style={{ padding: '16px 20px', textAlign: 'center' }}>
                         <button
-                          onClick={() => setSelectedUser(user)}
+                          onClick={() => {
+                            setSelectedUser(user);
+                            cancelEditOrder();
+                          }}
                           style={{
                             padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600,
                             backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
@@ -227,7 +265,7 @@ export const UserList: React.FC = () => {
                           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-primary)'; e.currentTarget.style.color = '#FFF'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'; e.currentTarget.style.color = 'var(--color-text-main)'; }}
                         >
-                          주문 이력 보기
+                          주문 이력 편집
                         </button>
                       </td>
                     </tr>
@@ -248,7 +286,10 @@ export const UserList: React.FC = () => {
       {/* User Detail Modal */}
       {selectedUser && createPortal(
         <div 
-          onClick={() => setSelectedUser(null)}
+          onClick={() => {
+            setSelectedUser(null);
+            cancelEditOrder();
+          }}
           style={{
             position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
             backgroundColor: 'rgba(44, 38, 33, 0.4)', backdropFilter: 'blur(4px)',
@@ -280,7 +321,10 @@ export const UserList: React.FC = () => {
                 </div>
               </div>
               <button
-                onClick={() => setSelectedUser(null)}
+                onClick={() => {
+                  setSelectedUser(null);
+                  cancelEditOrder();
+                }}
                 style={{
                   background: 'rgba(255, 255, 255, 0.85)', cursor: 'pointer', color: 'var(--color-text-sub)',
                   width: '32px', height: '32px', borderRadius: '50%',
@@ -299,12 +343,14 @@ export const UserList: React.FC = () => {
             <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
               <h3 className="serif-font" style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <ShoppingBag size={18} style={{ color: 'var(--color-primary)' }} />
-                누적 구매(주문) 이력
+                누적 구매(주문) 이력 편집
               </h3>
 
               {getUserOrders(selectedUser.username).length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {getUserOrders(selectedUser.username).map(order => (
+                  {getUserOrders(selectedUser.username).map(order => {
+                    const isEditing = editingOrderId === order.id;
+                    return (
                     <div key={order.id} style={{
                       padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)',
                       backgroundColor: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column', gap: '10px'
@@ -320,27 +366,149 @@ export const UserList: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Middle Row: Product Info & Date */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-                        <div>
-                          <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--color-text-main)' }}>
-                            {order.ritualType}
+                      {isEditing ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          <div className="responsive-form-grid-1-1">
+                            <input
+                              type="text"
+                              value={orderDraft.customerName || ''}
+                              onChange={(e) => setOrderDraft(prev => ({ ...prev, customerName: e.target.value }))}
+                              placeholder="고객명"
+                            />
+                            <input
+                              type="tel"
+                              value={orderDraft.phone || ''}
+                              onChange={(e) => setOrderDraft(prev => ({ ...prev, phone: e.target.value }))}
+                              placeholder="연락처"
+                            />
                           </div>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--color-text-sub)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-                            <Calendar size={12} /> {order.createdAt || order.date} 주문
+                          <input
+                            type="text"
+                            value={orderDraft.ritualType || ''}
+                            onChange={(e) => setOrderDraft(prev => ({ ...prev, ritualType: e.target.value }))}
+                            placeholder="주문상품"
+                          />
+                          <div className="responsive-form-grid-1-1">
+                            <input
+                              type="date"
+                              value={orderDraft.date || ''}
+                              onChange={(e) => setOrderDraft(prev => ({ ...prev, date: e.target.value }))}
+                            />
+                            <input
+                              type="text"
+                              value={orderDraft.timeSlot || ''}
+                              onChange={(e) => setOrderDraft(prev => ({ ...prev, timeSlot: e.target.value }))}
+                              placeholder="배송 시간"
+                            />
+                          </div>
+                          <div className="responsive-form-grid-1-1">
+                            <select
+                              value={orderDraft.status || 'pending'}
+                              onChange={(e) => setOrderDraft(prev => ({ ...prev, status: e.target.value as InquiryStatus }))}
+                            >
+                              {(['pending', 'approved', 'processing', 'completed', 'cancelled'] as InquiryStatus[]).map(status => (
+                                <option key={status} value={status}>{getStatusLabel(status)}</option>
+                              ))}
+                            </select>
+                            <select
+                              value={orderDraft.paymentStatus || 'pending'}
+                              onChange={(e) => setOrderDraft(prev => ({ ...prev, paymentStatus: e.target.value as Inquiry['paymentStatus'] }))}
+                            >
+                              <option value="pending">결제대기</option>
+                              <option value="paid">결제완료</option>
+                              <option value="cancelled">결제취소</option>
+                            </select>
+                          </div>
+                          <div className="responsive-form-grid-1-1">
+                            <input
+                              type="number"
+                              value={orderDraft.totalPrice ?? 0}
+                              onChange={(e) => setOrderDraft(prev => ({ ...prev, totalPrice: Number(e.target.value) }))}
+                              placeholder="결제금액"
+                            />
+                            <input
+                              type="text"
+                              value={orderDraft.paymentMethod || ''}
+                              onChange={(e) => setOrderDraft(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                              placeholder="결제수단"
+                            />
+                          </div>
+                          <input
+                            type="text"
+                            value={orderDraft.address || ''}
+                            onChange={(e) => setOrderDraft(prev => ({ ...prev, address: e.target.value }))}
+                            placeholder="주소"
+                          />
+                          <input
+                            type="text"
+                            value={orderDraft.addressDetail || ''}
+                            onChange={(e) => setOrderDraft(prev => ({ ...prev, addressDetail: e.target.value }))}
+                            placeholder="상세 주소"
+                          />
+                          <textarea
+                            value={orderDraft.specialRequests || ''}
+                            onChange={(e) => setOrderDraft(prev => ({ ...prev, specialRequests: e.target.value }))}
+                            rows={3}
+                            placeholder="고객 요청사항"
+                            style={{ resize: 'vertical', lineHeight: 1.6 }}
+                          />
+                          <textarea
+                            value={orderDraft.adminNotes || ''}
+                            onChange={(e) => setOrderDraft(prev => ({ ...prev, adminNotes: e.target.value }))}
+                            rows={3}
+                            placeholder="관리자 메모"
+                            style={{ resize: 'vertical', lineHeight: 1.6 }}
+                          />
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                            <button onClick={cancelEditOrder} className="btn-secondary" style={{ padding: '9px 12px', borderRadius: '10px', fontSize: '0.82rem' }}>
+                              <X size={14} /> 취소
+                            </button>
+                            <button onClick={() => saveOrder(order.id)} className="btn-primary" style={{ padding: '9px 12px', borderRadius: '10px', fontSize: '0.82rem', boxShadow: 'none' }}>
+                              <Save size={14} /> 저장
+                            </button>
                           </div>
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-                            {order.totalPrice.toLocaleString()}원
+                      ) : (
+                        <>
+                          {/* Middle Row: Product Info & Date */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                            <div>
+                              <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--color-text-main)' }}>
+                                {order.ritualType}
+                              </div>
+                              <div style={{ fontSize: '0.8rem', color: 'var(--color-text-sub)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                                <Calendar size={12} /> {order.createdAt || order.date} 주문
+                              </div>
+                              <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginTop: '4px', lineHeight: 1.5 }}>
+                                {order.address} {order.addressDetail}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-primary)' }}>
+                                {order.totalPrice.toLocaleString()}원
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                                {order.paymentMethod || '무통장 입금'} · {order.paymentStatus === 'paid' ? '결제완료' : order.paymentStatus === 'cancelled' ? '결제취소' : '결제대기'}
+                              </div>
+                            </div>
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                            {order.paymentMethod || '무통장 입금'}
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                            <button onClick={() => startEditOrder(order)} className="btn-secondary" style={{ padding: '8px 12px', borderRadius: '10px', fontSize: '0.82rem' }}>
+                              <Pencil size={14} /> 수정
+                            </button>
+                            <button
+                              onClick={() => removeOrder(order)}
+                              className="btn-secondary"
+                              style={{ padding: '8px 12px', borderRadius: '10px', fontSize: '0.82rem', color: 'var(--color-rose)', borderColor: 'var(--color-rose)' }}
+                            >
+                              <Trash2 size={14} /> 삭제
+                            </button>
                           </div>
-                        </div>
-                      </div>
+                        </>
+                      )}
                     </div>
-                  ))}
+                  );
+                })}
                 </div>
               ) : (
                 <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)', backgroundColor: '#F8F9FA', borderRadius: '12px' }}>

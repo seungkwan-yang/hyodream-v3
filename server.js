@@ -764,12 +764,31 @@ app.post('/api/inquiries', async (req, res) => {
 
 app.put('/api/inquiries/:id', async (req, res) => {
   const { id } = req.params;
-  const { status, adminNotes } = req.body;
+  const {
+    customerName,
+    phone,
+    ritualType,
+    date,
+    timeSlot,
+    address,
+    addressDetail,
+    specialRequests,
+    customizations,
+    subtractions,
+    totalPrice,
+    status,
+    adminNotes,
+    paymentMethod,
+    paymentStatus,
+    tossTransactionId,
+    userId,
+    pointsUsed
+  } = req.body;
   try {
     await pool.query('BEGIN');
 
     // Get existing inquiry
-    const existing = await pool.query('SELECT status, user_id, total_price, payment_status, points_earned, points_used FROM hd_inquiries WHERE id = $1', [id]);
+    const existing = await pool.query('SELECT * FROM hd_inquiries WHERE id = $1', [id]);
     
     if (existing.rows.length === 0) {
       await pool.query('ROLLBACK');
@@ -778,26 +797,74 @@ app.put('/api/inquiries/:id', async (req, res) => {
 
     const inquiry = existing.rows[0];
     let newPaymentStatus = inquiry.payment_status;
+    const nextStatus = status || inquiry.status;
+    const nextTotalPrice = Number(totalPrice ?? inquiry.total_price);
+    const nextPointsEarned = Math.floor(nextTotalPrice * 0.01);
 
     // If changing from pending to approved/completed, confirm payment and award points
-    if (inquiry.payment_status === 'pending' && (status === 'approved' || status === 'completed')) {
+    if (inquiry.payment_status === 'pending' && (nextStatus === 'approved' || nextStatus === 'completed')) {
       newPaymentStatus = 'paid';
       if (inquiry.user_id) {
-        const pointsToAward = inquiry.points_earned || Math.floor(inquiry.total_price * 0.01);
+        const pointsToAward = inquiry.points_earned || nextPointsEarned;
         await pool.query('UPDATE hd_users SET points = points + $1 WHERE username = $2', [pointsToAward, inquiry.user_id]);
       }
     }
 
     // If the order is cancelled, refund used points
-    if (inquiry.status !== 'cancelled' && status === 'cancelled') {
+    if (inquiry.status !== 'cancelled' && nextStatus === 'cancelled') {
       if (inquiry.user_id && inquiry.points_used > 0) {
         await pool.query('UPDATE hd_users SET points = points + $1 WHERE username = $2', [inquiry.points_used, inquiry.user_id]);
       }
+      newPaymentStatus = 'cancelled';
+    } else if (paymentStatus) {
+      newPaymentStatus = paymentStatus;
     }
 
     const result = await pool.query(
-      'UPDATE hd_inquiries SET status = $1, admin_notes = $2, payment_status = $3 WHERE id = $4 RETURNING id, customer_name as "customerName", phone, ritual_type as "ritualType", date, time_slot as "timeSlot", address, address_detail as "addressDetail", special_requests as "specialRequests", customizations, subtractions, total_price as "totalPrice", created_at as "createdAt", status, admin_notes as "adminNotes", payment_method as "paymentMethod", payment_status as "paymentStatus", toss_transaction_id as "tossTransactionId", user_id as "userId", points_earned as "pointsEarned", points_used as "pointsUsed"',
-      [status, adminNotes, newPaymentStatus, id]
+      `UPDATE hd_inquiries SET
+        customer_name = $1,
+        phone = $2,
+        ritual_type = $3,
+        date = $4,
+        time_slot = $5,
+        address = $6,
+        address_detail = $7,
+        special_requests = $8,
+        customizations = $9,
+        subtractions = $10,
+        total_price = $11,
+        status = $12,
+        admin_notes = $13,
+        payment_method = $14,
+        payment_status = $15,
+        toss_transaction_id = $16,
+        user_id = $17,
+        points_earned = $18,
+        points_used = $19
+       WHERE id = $20
+       RETURNING id, customer_name as "customerName", phone, ritual_type as "ritualType", date, time_slot as "timeSlot", address, address_detail as "addressDetail", special_requests as "specialRequests", customizations, subtractions, total_price as "totalPrice", created_at as "createdAt", status, admin_notes as "adminNotes", payment_method as "paymentMethod", payment_status as "paymentStatus", toss_transaction_id as "tossTransactionId", user_id as "userId", points_earned as "pointsEarned", points_used as "pointsUsed"`,
+      [
+        customerName ?? inquiry.customer_name,
+        phone ?? inquiry.phone,
+        ritualType ?? inquiry.ritual_type,
+        date ?? inquiry.date,
+        timeSlot ?? inquiry.time_slot,
+        address ?? inquiry.address,
+        addressDetail ?? inquiry.address_detail,
+        specialRequests ?? inquiry.special_requests,
+        customizations ?? inquiry.customizations ?? [],
+        subtractions ?? inquiry.subtractions ?? [],
+        nextTotalPrice,
+        nextStatus,
+        adminNotes ?? inquiry.admin_notes,
+        paymentMethod ?? inquiry.payment_method,
+        newPaymentStatus,
+        tossTransactionId ?? inquiry.toss_transaction_id,
+        userId ?? inquiry.user_id,
+        nextPointsEarned,
+        pointsUsed ?? inquiry.points_used ?? 0,
+        id
+      ]
     );
 
     await pool.query('COMMIT');
