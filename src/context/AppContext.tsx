@@ -234,6 +234,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     const latest = await res.json();
     setUsers(latest);
+    setCurrentUser(prev => prev ? latest.find((user: User) => user.username === prev.username) || prev : prev);
     return latest as User[];
   };
 

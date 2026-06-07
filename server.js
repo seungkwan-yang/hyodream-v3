@@ -809,7 +809,7 @@ app.put('/api/inquiries/:id', async (req, res) => {
       nextStatus = 'approved';
     }
 
-    if (requestedPaymentStatus === 'pending' && nextStatus === 'cancelled') {
+    if (requestedPaymentStatus === 'pending') {
       nextStatus = 'pending';
     }
 

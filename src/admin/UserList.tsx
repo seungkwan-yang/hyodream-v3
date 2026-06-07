@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
 import type { User, Inquiry, InquiryStatus } from '../context/AppContext';
@@ -14,6 +14,12 @@ export const UserList: React.FC = () => {
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
   const [orderDraft, setOrderDraft] = useState<Partial<Inquiry>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!selectedUser) return;
+    const latest = users.find(user => user.username === selectedUser.username);
+    if (latest) setSelectedUser(latest);
+  }, [users, selectedUser?.username]);
 
   // Filter users by name or phone
   const filteredUsers = users.filter(user => {

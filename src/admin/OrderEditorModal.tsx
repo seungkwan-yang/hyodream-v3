@@ -42,13 +42,13 @@ const getPaymentStatusLabel = (status: Inquiry['paymentStatus']) => {
 const syncStatusFromPayment = (paymentStatus: Inquiry['paymentStatus'], status?: InquiryStatus): InquiryStatus | undefined => {
   if (paymentStatus === 'cancelled') return 'cancelled';
   if (paymentStatus === 'paid' && (!status || status === 'pending' || status === 'cancelled')) return 'approved';
-  if (paymentStatus === 'pending' && status === 'cancelled') return 'pending';
+  if (paymentStatus === 'pending') return 'pending';
   return status;
 };
 
 const syncPaymentFromStatus = (status: InquiryStatus, paymentStatus?: Inquiry['paymentStatus']): Inquiry['paymentStatus'] => {
   if (status === 'cancelled') return 'cancelled';
-  if (status === 'pending') return paymentStatus === 'cancelled' ? 'pending' : paymentStatus;
+  if (status === 'pending') return 'pending';
   return paymentStatus === 'cancelled' || !paymentStatus ? 'paid' : paymentStatus;
 };
 
