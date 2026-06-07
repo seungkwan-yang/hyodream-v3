@@ -575,16 +575,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateInquiryStatus = async (id: string, status: InquiryStatus) => {
     const base = inquiries.find(i => i.id === id);
     if (!base) return null;
+    const paymentStatus: Inquiry['paymentStatus'] =
+      status === 'pending' ? 'pending' :
+      status === 'cancelled' ? 'cancelled' :
+      'paid';
 
     setInquiries(prev =>
-      prev.map(item => (item.id === id ? { ...item, status } : item))
+      prev.map(item => (item.id === id ? { ...item, status, paymentStatus } : item))
     );
 
     try {
       const res = await fetch(`${API_BASE}/api/inquiries/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, adminNotes: base.adminNotes || '' })
+        body: JSON.stringify({ status, paymentStatus, adminNotes: base.adminNotes || '' })
       });
 
       if (!res.ok) {
