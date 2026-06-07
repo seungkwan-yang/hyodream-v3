@@ -9,6 +9,7 @@ export const UserList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+  const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
   const [orderDraft, setOrderDraft] = useState<Partial<Inquiry>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -146,18 +147,26 @@ export const UserList: React.FC = () => {
     setOrderDraft({});
   };
 
-  const saveOrder = (orderId: string) => {
+  const saveOrder = async (orderId: string) => {
     const totalPrice = Number(orderDraft.totalPrice || 0);
     if (!orderDraft.customerName?.trim()) return alert('고객명을 입력해 주세요.');
     if (!orderDraft.phone?.trim()) return alert('연락처를 입력해 주세요.');
     if (!orderDraft.ritualType?.trim()) return alert('주문상품을 입력해 주세요.');
     if (Number.isNaN(totalPrice) || totalPrice < 0) return alert('결제금액을 올바르게 입력해 주세요.');
 
-    updateInquiry(orderId, {
+    setSavingOrderId(orderId);
+    const saved = await updateInquiry(orderId, {
       ...orderDraft,
       totalPrice,
       pointsEarned: Math.floor(totalPrice * 0.01)
     });
+    setSavingOrderId(null);
+
+    if (!saved) {
+      alert('주문 이력 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+      return;
+    }
+
     setEditingOrderId(null);
     setOrderDraft({});
   };
@@ -350,6 +359,7 @@ export const UserList: React.FC = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {getUserOrders(selectedUser.username).map(order => {
                     const isEditing = editingOrderId === order.id;
+                    const isSaving = savingOrderId === order.id;
                     return (
                     <div key={order.id} style={{
                       padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)',
@@ -460,11 +470,11 @@ export const UserList: React.FC = () => {
                             style={{ resize: 'vertical', lineHeight: 1.6 }}
                           />
                           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                            <button onClick={cancelEditOrder} className="btn-secondary" style={{ padding: '9px 12px', borderRadius: '10px', fontSize: '0.82rem' }}>
+                            <button onClick={cancelEditOrder} disabled={isSaving} className="btn-secondary" style={{ padding: '9px 12px', borderRadius: '10px', fontSize: '0.82rem' }}>
                               <X size={14} /> 취소
                             </button>
-                            <button onClick={() => saveOrder(order.id)} className="btn-primary" style={{ padding: '9px 12px', borderRadius: '10px', fontSize: '0.82rem', boxShadow: 'none' }}>
-                              <Save size={14} /> 저장
+                            <button onClick={() => saveOrder(order.id)} disabled={isSaving} className="btn-primary" style={{ padding: '9px 12px', borderRadius: '10px', fontSize: '0.82rem', boxShadow: 'none' }}>
+                              <Save size={14} /> {isSaving ? '저장 중' : '저장'}
                             </button>
                           </div>
                         </div>

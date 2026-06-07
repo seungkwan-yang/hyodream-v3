@@ -138,7 +138,7 @@ interface AppContextType {
   // Inquiries
   inquiries: Inquiry[];
   addInquiry: (inquiry: Omit<Inquiry, 'id' | 'createdAt' | 'status'> & { status?: InquiryStatus, paymentMethod?: string, paymentStatus?: 'paid' | 'pending' | 'cancelled', tossTransactionId?: string }) => Inquiry;
-  updateInquiry: (id: string, updated: Partial<Inquiry>) => void;
+  updateInquiry: (id: string, updated: Partial<Inquiry>) => Promise<boolean>;
   updateInquiryStatus: (id: string, status: InquiryStatus) => void;
   updateInquiryNotes: (id: string, notes: string) => void;
   deleteInquiry: (id: string) => void;
@@ -567,32 +567,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const updateInquiry = (id: string, updated: Partial<Inquiry>) => {
-    let mergedPayload: Inquiry | null = null;
-    setInquiries(prev =>
-      prev.map(item => {
-        if (item.id !== id) return item;
-        mergedPayload = { ...item, ...updated };
-        return mergedPayload;
-      })
-    );
-
+  const updateInquiry = async (id: string, updated: Partial<Inquiry>) => {
     const base = inquiries.find(i => i.id === id);
-    const payload = mergedPayload || (base ? { ...base, ...updated } : null);
-    if (payload) {
-      fetch(`${API_BASE}/api/inquiries/${id}`, {
+    if (!base) return false;
+
+    const payload = { ...base, ...updated };
+    setInquiries(prev => prev.map(item => (item.id === id ? payload : item)));
+
+    try {
+      const res = await fetch(`${API_BASE}/api/inquiries/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      })
-        .then(async res => {
-          if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || '주문 수정 실패');
-          return res.json();
-        })
-        .then(saved => {
-          setInquiries(prev => prev.map(item => (item.id === id ? saved : item)));
-        })
-        .catch(err => console.error('[HyoDream DB Sync] updateInquiry failed:', err));
+      });
+
+      if (!res.ok) {
+        throw new Error((await res.json().catch(() => null))?.error || '주문 수정 실패');
+      }
+
+      const saved = await res.json();
+      setInquiries(prev => prev.map(item => (item.id === id ? saved : item)));
+      return true;
+    } catch (err) {
+      setInquiries(prev => prev.map(item => (item.id === id ? base : item)));
+      console.error('[HyoDream DB Sync] updateInquiry failed:', err);
+      return false;
     }
   };
 
