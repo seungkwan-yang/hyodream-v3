@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import type { CustomerTab, ViewMode } from '../context/AppContext';
+import type { AdminTab, CustomerTab, ViewMode } from '../context/AppContext';
 import { Sparkles, CalendarCheck, ShieldAlert, Menu, X } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -327,13 +327,14 @@ export const Header: React.FC = () => {
                 { id: 'dashboard', label: '현황 대시보드' },
                 { id: 'inquiries', label: '주문 및 결제 내역 관리' },
                 { id: 'users', label: '회원 관리' },
+                { id: 'reviews', label: '후기 관리' },
                 { id: 'pricing', label: '메뉴 단가/옵션 관리' },
                 { id: 'settings', label: '테마 설정' }
               ].map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => {
-                    setAdminTab(tab.id as any);
+                    setAdminTab(tab.id as AdminTab);
                     setIsMobileMenuOpen(false);
                   }}
                   className={`mobile-nav-link ${adminTab === tab.id ? 'active' : ''}`}

@@ -133,7 +133,8 @@ export const WriteReview: React.FC = () => {
       title: title.trim(),
       content: content.trim(),
       packageType: packageType,
-      imageUrl: imageUrl || null
+      imageUrl: imageUrl || null,
+      userId: currentUser?.username
     };
 
     try {

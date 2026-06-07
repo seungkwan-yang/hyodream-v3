@@ -5,7 +5,8 @@ import { OrderList } from './OrderList';
 import { PriceManager } from './PriceManager';
 import { ThemeSettings } from './ThemeSettings';
 import { UserList } from './UserList';
-import { LayoutDashboard, ClipboardList, Settings, Sparkles, Palette, Users } from 'lucide-react';
+import { ReviewManager } from './ReviewManager';
+import { LayoutDashboard, ClipboardList, MessageSquareText, Settings, Sparkles, Palette, Users } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
   const { adminTab, setAdminTab, addInquiry, inquiries } = useApp();
@@ -77,6 +78,8 @@ export const AdminDashboard: React.FC = () => {
         return <AdminStats />;
       case 'inquiries':
         return <OrderList />;
+      case 'reviews':
+        return <ReviewManager />;
       case 'pricing':
         return <PriceManager />;
       case 'settings':
@@ -163,6 +166,21 @@ export const AdminDashboard: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setAdminTab('reviews')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '12px',
+              width: '100%', padding: '14px 18px', border: 'none', borderRadius: '12px',
+              fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer',
+              textAlign: 'left', transition: 'var(--transition-smooth)',
+              backgroundColor: adminTab === 'reviews' ? 'var(--color-primary-fade)' : 'transparent',
+              color: adminTab === 'reviews' ? 'var(--color-primary)' : 'var(--color-text-sub)'
+            }}
+          >
+            <MessageSquareText size={18} />
+            후기 관리
+          </button>
+
+          <button
             onClick={() => setAdminTab('pricing')}
             style={{
               display: 'flex', alignItems: 'center', gap: '12px',
@@ -234,6 +252,7 @@ export const AdminDashboard: React.FC = () => {
               {adminTab === 'dashboard' && '실시간 현황판 (Overview)'}
               {adminTab === 'inquiries' && '주문 및 결제 내역 관리'}
               {adminTab === 'users' && '회원 관리 및 구매 이력'}
+              {adminTab === 'reviews' && '고객 후기 및 관리자 댓글 관리'}
               {adminTab === 'pricing' && '상품 단가 및 맞춤 옵션 관리'}
               {adminTab === 'settings' && '시스템 테마 설정'}
             </h1>
@@ -241,6 +260,7 @@ export const AdminDashboard: React.FC = () => {
               {adminTab === 'dashboard' && '효드림 사이트에 유입되는 매출 지표와 핵심 현황 통계입니다.'}
               {adminTab === 'inquiries' && '고객이 주문하고 결제한 실시간 주문 명세서를 열람하고 상태를 조율합니다.'}
               {adminTab === 'users' && '가입된 회원을 검색하고 각 회원의 주문 내역을 상세하게 확인할 수 있습니다.'}
+              {adminTab === 'reviews' && '고객 후기를 삭제하거나 고객 화면에 표시될 관리자 댓글을 작성합니다.'}
               {adminTab === 'pricing' && '상차림 패키지 가격 및 프리미엄 단품 단가를 실시간으로 변경합니다.'}
               {adminTab === 'settings' && '관리자 페이지의 브랜드 색상 및 테마를 구성합니다.'}
             </p>

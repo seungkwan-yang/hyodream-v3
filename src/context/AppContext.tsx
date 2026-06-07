@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 // Type definitions
 export type ViewMode = 'customer' | 'admin';
 export type CustomerTab = 'home' | 'estimator' | 'menu' | 'reviews' | 'faq' | 'write-review' | 'login' | 'register-agreement' | 'register-form' | 'mypage';
-export type AdminTab = 'dashboard' | 'inquiries' | 'pricing' | 'settings' | 'users';
+export type AdminTab = 'dashboard' | 'inquiries' | 'reviews' | 'pricing' | 'settings' | 'users';
 export type ThemeType = 'sage' | 'indigo' | 'burgundy' | 'slate' | 'terracotta';
 export type InquiryStatus = 'pending' | 'approved' | 'processing' | 'completed';
 

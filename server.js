@@ -76,6 +76,11 @@ pool.on('error', (err) => {
   console.error('[HyoDream DB Pool] Unexpected database connection error:', err);
 });
 
+const ensureReviewAdminReplyColumn = async () => {
+  await pool.query('ALTER TABLE hd_reviews ADD COLUMN IF NOT EXISTS admin_reply TEXT DEFAULT NULL;');
+  await pool.query('ALTER TABLE hd_reviews ADD COLUMN IF NOT EXISTS user_id VARCHAR(50);');
+};
+
 // Database Auto-Seeding (Self-Healing Migration)
 async function seedDatabase() {
   let client;
@@ -274,6 +279,9 @@ async function seedDatabase() {
     
     // Self-healing schema migration: ensure column 'title' exists in database
     await client.query('ALTER TABLE hd_reviews ADD COLUMN IF NOT EXISTS title VARCHAR(200) DEFAULT \'\';');
+    // Self-healing schema migration: ensure column 'admin_reply' exists for admin comments feature
+    await client.query('ALTER TABLE hd_reviews ADD COLUMN IF NOT EXISTS admin_reply TEXT DEFAULT NULL;');
+    await client.query('ALTER TABLE hd_reviews ADD COLUMN IF NOT EXISTS user_id VARCHAR(50);');
     
     const reviewCheck = await client.query('SELECT COUNT(*) FROM hd_reviews');
     if (parseInt(reviewCheck.rows[0].count) === 0) {
@@ -813,7 +821,8 @@ app.delete('/api/inquiries/:id', async (req, res) => {
 // 6. Customer Reviews API
 app.get('/api/reviews', async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, name, rating, date, title, content, package_type as "packageType", image_url as "imageUrl" FROM hd_reviews ORDER BY id DESC');
+    await ensureReviewAdminReplyColumn();
+    const result = await pool.query('SELECT id, name, rating, date, title, content, package_type as "packageType", image_url as "imageUrl", admin_reply as "adminReply", user_id as "userId" FROM hd_reviews ORDER BY id DESC');
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -821,13 +830,81 @@ app.get('/api/reviews', async (req, res) => {
 });
 
 app.post('/api/reviews', async (req, res) => {
-  const { name, rating, date, title, content, packageType, imageUrl } = req.body;
+  const { name, rating, date, title, content, packageType, imageUrl, userId } = req.body;
   try {
+    await ensureReviewAdminReplyColumn();
     const result = await pool.query(
-      'INSERT INTO hd_reviews (name, rating, date, title, content, package_type, image_url) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, name, rating, date, title, content, package_type as "packageType", image_url as "imageUrl"',
-      [name, rating, date, title || '', content, packageType, imageUrl || null]
+      'INSERT INTO hd_reviews (name, rating, date, title, content, package_type, image_url, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, name, rating, date, title, content, package_type as "packageType", image_url as "imageUrl", admin_reply as "adminReply", user_id as "userId"',
+      [name, rating, date, title || '', content, packageType, imageUrl || null, userId || null]
     );
     res.status(201).json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/users/:username/reviews', async (req, res) => {
+  try {
+    await ensureReviewAdminReplyColumn();
+    const result = await pool.query(
+      'SELECT id, name, rating, date, title, content, package_type as "packageType", image_url as "imageUrl", admin_reply as "adminReply", user_id as "userId" FROM hd_reviews WHERE user_id = $1 ORDER BY id DESC',
+      [req.params.username]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/reviews/:id', async (req, res) => {
+  const { id } = req.params;
+  const { userId, rating, title, content, packageType, imageUrl } = req.body;
+  if (!userId) return res.status(400).json({ error: '로그인 사용자 정보가 필요합니다.' });
+  if (!title || !content || String(content).trim().length < 10) {
+    return res.status(400).json({ error: '후기 제목과 10자 이상의 내용을 입력해 주세요.' });
+  }
+
+  try {
+    await ensureReviewAdminReplyColumn();
+    const result = await pool.query(
+      `UPDATE hd_reviews
+       SET rating = $1, title = $2, content = $3, package_type = $4, image_url = $5
+       WHERE id = $6 AND user_id = $7
+       RETURNING id, name, rating, date, title, content, package_type as "packageType", image_url as "imageUrl", admin_reply as "adminReply", user_id as "userId"`,
+      [rating, title, content, packageType, imageUrl || null, id, userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(403).json({ error: '본인이 작성한 후기만 수정할 수 있습니다.' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/reviews/:id/reply — Admin adds/edits a reply comment
+app.put('/api/reviews/:id/reply', async (req, res) => {
+  const { id } = req.params;
+  const { adminReply } = req.body;
+  try {
+    await ensureReviewAdminReplyColumn();
+    const result = await pool.query(
+      'UPDATE hd_reviews SET admin_reply = $1 WHERE id = $2 RETURNING id, name, rating, date, title, content, package_type as "packageType", image_url as "imageUrl", admin_reply as "adminReply", user_id as "userId"',
+      [adminReply || null, id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Review not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/reviews/:id — Admin deletes a review
+app.delete('/api/reviews/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM hd_reviews WHERE id = $1', [id]);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

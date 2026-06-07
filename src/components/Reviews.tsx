@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Award, CheckCircle2, Heart } from 'lucide-react';
+import { Star, Award, CheckCircle2, Heart, MessageSquareReply, Pencil, Save, X, Camera, Trash2, RefreshCw } from 'lucide-react';
+import { useApp } from '../context/AppContext';
 
 interface Review {
   id?: number;
@@ -10,6 +11,8 @@ interface Review {
   content: string;
   packageType: string;
   imageUrl?: string;
+  adminReply?: string | null;
+  userId?: string | null;
 }
 
 interface ReviewsProps {
@@ -17,8 +20,20 @@ interface ReviewsProps {
 }
 
 export const Reviews: React.FC<ReviewsProps> = ({ limit }) => {
+  const { currentUser } = useApp();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [editingReviewId, setEditingReviewId] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState({
+    title: '',
+    content: '',
+    packageType: '',
+    rating: 5,
+    imageUrl: ''
+  });
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [isUploadingEditImage, setIsUploadingEditImage] = useState(false);
 
   // Sorting and Pagination states (for PC)
   const [sortBy, setSortBy] = useState<'rating' | 'date'>('rating');
@@ -65,6 +80,317 @@ export const Reviews: React.FC<ReviewsProps> = ({ limit }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const canEditReview = (review: Review) => {
+    return Boolean(currentUser && review.id && review.userId === currentUser.username);
+  };
+
+  const startEditReview = (review: Review) => {
+    if (!review.id) return;
+    setEditingReviewId(review.id);
+    setEditDraft({
+      title: review.title || '',
+      content: review.content,
+      packageType: review.packageType,
+      rating: review.rating,
+      imageUrl: review.imageUrl || ''
+    });
+    setEditError(null);
+  };
+
+  const cancelEditReview = () => {
+    setEditingReviewId(null);
+    setEditError(null);
+  };
+
+  const handleSaveReview = async (reviewId?: number) => {
+    if (!reviewId || !currentUser) return;
+    if (!editDraft.title.trim()) {
+      setEditError('후기 제목을 입력해 주세요.');
+      return;
+    }
+    if (editDraft.content.trim().length < 10) {
+      setEditError('후기 내용을 10자 이상 입력해 주세요.');
+      return;
+    }
+
+    try {
+      setIsSavingEdit(true);
+      setEditError(null);
+      const response = await fetch(`/api/reviews/${reviewId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUser.username,
+          rating: editDraft.rating,
+          title: editDraft.title.trim(),
+          content: editDraft.content.trim(),
+          packageType: editDraft.packageType,
+          imageUrl: editDraft.imageUrl || null
+        })
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || '후기 수정에 실패했습니다.');
+      }
+
+      const updated: Review = await response.json();
+      setReviews(prev => prev.map(review => review.id === reviewId ? updated : review));
+      setEditingReviewId(null);
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : '후기 수정 중 문제가 발생했습니다.');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  const handleEditImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    const allowedTypes = /jpeg|jpg|png|gif|webp|avif/;
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    if (!allowedTypes.test(ext) || !allowedTypes.test(file.type)) {
+      setEditError('이미지 파일만 업로드 가능합니다. (jpg, png, gif, webp, avif)');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setEditError('파일 용량은 최대 10MB까지 가능합니다.');
+      return;
+    }
+
+    try {
+      setIsUploadingEditImage(true);
+      setEditError(null);
+      const formData = new FormData();
+      formData.append('image', file);
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error || '이미지 업로드에 실패했습니다.');
+      setEditDraft(prev => ({ ...prev, imageUrl: payload.url }));
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : '이미지 업로드 중 문제가 발생했습니다.');
+    } finally {
+      setIsUploadingEditImage(false);
+    }
+  };
+
+  const renderEditImageControl = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--color-text-main)' }}>후기 이미지</span>
+      {editDraft.imageUrl ? (
+        <div style={{ position: 'relative', width: '100%', height: '180px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+          <img src={editDraft.imageUrl} alt="후기 이미지 미리보기" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <button
+            type="button"
+            onClick={() => setEditDraft(prev => ({ ...prev, imageUrl: '' }))}
+            style={{
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '7px 10px',
+              border: 'none',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(227, 176, 152, 0.95)',
+              color: '#FFFFFF',
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              cursor: 'pointer'
+            }}
+          >
+            <Trash2 size={13} /> 제거
+          </button>
+        </div>
+      ) : (
+        <label style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '120px',
+          borderRadius: '12px',
+          border: '2px dashed var(--border-color)',
+          backgroundColor: 'var(--bg-primary)',
+          cursor: isUploadingEditImage ? 'not-allowed' : 'pointer',
+          padding: '18px',
+          textAlign: 'center'
+        }}>
+          <input type="file" accept="image/*" onChange={handleEditImageUpload} disabled={isUploadingEditImage} style={{ display: 'none' }} />
+          {isUploadingEditImage ? (
+            <>
+              <RefreshCw size={24} style={{ color: 'var(--color-primary)', marginBottom: '8px' }} />
+              <span style={{ fontSize: '0.8rem', color: 'var(--color-text-sub)', fontWeight: 700 }}>이미지 업로드 중...</span>
+            </>
+          ) : (
+            <>
+              <Camera size={24} style={{ color: 'var(--color-text-muted)', marginBottom: '8px' }} />
+              <span style={{ fontSize: '0.84rem', color: 'var(--color-text-sub)', fontWeight: 800 }}>이미지 추가하기</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>jpg, png, gif, webp, avif / 최대 10MB</span>
+            </>
+          )}
+        </label>
+      )}
+      {editDraft.imageUrl && (
+        <label className="btn-secondary" style={{ justifyContent: 'center', padding: '10px 12px', borderRadius: '10px', fontSize: '0.82rem', cursor: isUploadingEditImage ? 'not-allowed' : 'pointer' }}>
+          <input type="file" accept="image/*" onChange={handleEditImageUpload} disabled={isUploadingEditImage} style={{ display: 'none' }} />
+          <Camera size={14} /> {isUploadingEditImage ? '변경 중' : '이미지 변경'}
+        </label>
+      )}
+    </div>
+  );
+
+  const renderAdminReply = (adminReply?: string | null, variant: 'card' | 'list' = 'card') => {
+    if (!adminReply) return null;
+
+    return (
+      <div style={{
+        marginTop: variant === 'list' ? '10px' : '14px',
+        padding: variant === 'list' ? '12px 14px' : '14px 16px',
+        borderRadius: variant === 'list' ? '10px' : '12px',
+        backgroundColor: 'var(--color-primary-fade)',
+        border: '1px solid var(--border-color)'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          color: 'var(--color-primary)',
+          fontSize: variant === 'list' ? '0.74rem' : '0.78rem',
+          fontWeight: 800,
+          marginBottom: variant === 'list' ? '4px' : '6px'
+        }}>
+          <MessageSquareReply size={14} />
+          효드림 답변
+        </div>
+        <p style={{
+          color: 'var(--color-text-sub)',
+          fontSize: variant === 'list' ? '0.8rem' : '0.84rem',
+          lineHeight: 1.6,
+          whiteSpace: 'pre-wrap',
+          fontStyle: 'normal'
+        }}>
+          {adminReply}
+        </p>
+      </div>
+    );
+  };
+
+  const renderReviewEditButton = (review: Review) => {
+    if (!canEditReview(review)) return null;
+    if (review.id === editingReviewId) return null;
+
+    return (
+      <button
+        type="button"
+        onClick={() => startEditReview(review)}
+        className="btn-secondary"
+        style={{
+          padding: '7px 10px',
+          borderRadius: '9px',
+          fontSize: '0.78rem',
+          flexShrink: 0,
+          boxShadow: 'none'
+        }}
+      >
+        <Pencil size={13} /> 수정
+      </button>
+    );
+  };
+
+  const renderReviewEditableContent = (review: Review, variant: 'card' | 'list' = 'card') => {
+    const isEditing = Boolean(review.id && editingReviewId === review.id);
+
+    if (isEditing) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: variant === 'list' ? '0' : '10px' }}>
+          <select
+            value={editDraft.rating}
+            onChange={(event) => setEditDraft(prev => ({ ...prev, rating: Number(event.target.value) }))}
+            style={{ maxWidth: '140px' }}
+          >
+            {[5, 4, 3, 2, 1].map(value => (
+              <option key={value} value={value}>{value}점</option>
+            ))}
+          </select>
+          <input
+            type="text"
+            value={editDraft.title}
+            onChange={(event) => setEditDraft(prev => ({ ...prev, title: event.target.value }))}
+            placeholder="후기 제목"
+          />
+          <input
+            type="text"
+            value={editDraft.packageType}
+            onChange={(event) => setEditDraft(prev => ({ ...prev, packageType: event.target.value }))}
+            placeholder="이용 상품"
+          />
+          <textarea
+            value={editDraft.content}
+            onChange={(event) => setEditDraft(prev => ({ ...prev, content: event.target.value }))}
+            rows={variant === 'list' ? 4 : 5}
+            placeholder="후기 내용"
+            style={{ resize: 'vertical', lineHeight: 1.6 }}
+          />
+          {renderEditImageControl()}
+          {editError && (
+            <div style={{
+              padding: '10px 12px',
+              borderRadius: '10px',
+              backgroundColor: 'rgba(227, 176, 152, 0.15)',
+              border: '1px solid var(--color-rose)',
+              color: '#A04E3A',
+              fontSize: '0.8rem',
+              fontWeight: 700
+            }}>
+              {editError}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            <button type="button" onClick={cancelEditReview} className="btn-secondary" style={{ padding: '9px 12px', borderRadius: '10px', fontSize: '0.82rem' }}>
+              <X size={14} /> 취소
+            </button>
+            <button type="button" onClick={() => handleSaveReview(review.id)} disabled={isSavingEdit || isUploadingEditImage} className="btn-primary" style={{ padding: '9px 12px', borderRadius: '10px', fontSize: '0.82rem', boxShadow: 'none' }}>
+              <Save size={14} /> {isSavingEdit ? '저장 중' : '수정 저장'}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        {review.title && (
+          <h4 style={{
+            fontSize: variant === 'list' ? '0.88rem' : '0.95rem',
+            fontWeight: 700,
+            color: 'var(--color-text-main)',
+            marginBottom: variant === 'list' ? '4px' : '8px',
+            lineHeight: 1.4
+          }}>
+            {review.title}
+          </h4>
+        )}
+        <p style={{
+          fontSize: variant === 'list' ? '0.85rem' : '0.88rem',
+          color: 'var(--color-text-sub)',
+          lineHeight: 1.6,
+          fontStyle: variant === 'list' ? 'normal' : 'italic',
+          margin: 0
+        }}>
+          "{review.content}"
+        </p>
+        {renderAdminReply(review.adminReply, variant)}
+      </>
+    );
   };
 
   const handleSort = (field: 'rating' | 'date') => {
@@ -149,17 +475,17 @@ export const Reviews: React.FC<ReviewsProps> = ({ limit }) => {
                     <img src={rev.imageUrl} alt="포토 후기" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                 )}
-                {rev.title && (
-                  <h4 style={{ fontSize: '0.93rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '6px', lineHeight: 1.4 }}>{rev.title}</h4>
-                )}
-                <p style={{ fontSize: '0.86rem', color: 'var(--color-text-sub)', lineHeight: 1.6, fontStyle: 'italic' }}>"{rev.content}"</p>
+                {renderReviewEditableContent(rev)}
               </div>
               <div style={{ marginTop: '20px', paddingTop: '14px', borderTop: '1px dashed var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
                 <div>
                   <strong style={{ display: 'block', color: 'var(--color-text-main)' }}>{rev.name}</strong>
                   <span style={{ color: 'var(--color-text-muted)', fontSize: '0.73rem' }}>주문상품: {rev.packageType}</span>
                 </div>
-                <span style={{ color: 'var(--color-text-muted)' }}>{rev.date}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  <span style={{ color: 'var(--color-text-muted)' }}>{rev.date}</span>
+                  {renderReviewEditButton(rev)}
+                </div>
               </div>
             </div>
           ))}
@@ -247,15 +573,7 @@ export const Reviews: React.FC<ReviewsProps> = ({ limit }) => {
                     </div>
                   )}
 
-                  {rev.title && (
-                    <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '8px', lineHeight: 1.4 }}>
-                      {rev.title}
-                    </h4>
-                  )}
-
-                  <p style={{ fontSize: '0.88rem', color: 'var(--color-text-sub)', lineHeight: 1.6, fontStyle: 'italic' }}>
-                    "{rev.content}"
-                  </p>
+                  {renderReviewEditableContent(rev)}
                 </div>
 
                 <div style={{
@@ -271,7 +589,10 @@ export const Reviews: React.FC<ReviewsProps> = ({ limit }) => {
                     <strong style={{ display: 'block', color: 'var(--color-text-main)' }}>{rev.name}</strong>
                     <span style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>주문상품: {rev.packageType}</span>
                   </div>
-                  <span style={{ color: 'var(--color-text-muted)' }}>{rev.date}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <span style={{ color: 'var(--color-text-muted)' }}>{rev.date}</span>
+                    {renderReviewEditButton(rev)}
+                  </div>
                 </div>
               </div>
             ))}
@@ -361,15 +682,7 @@ export const Reviews: React.FC<ReviewsProps> = ({ limit }) => {
                     </div>
                   )}
 
-                  {rev.title && (
-                    <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '8px', lineHeight: 1.4 }}>
-                      {rev.title}
-                    </h4>
-                  )}
-
-                  <p style={{ fontSize: '0.88rem', color: 'var(--color-text-sub)', lineHeight: 1.6, fontStyle: 'italic' }}>
-                    "{rev.content}"
-                  </p>
+                  {renderReviewEditableContent(rev)}
                 </div>
 
                 <div style={{
@@ -385,7 +698,10 @@ export const Reviews: React.FC<ReviewsProps> = ({ limit }) => {
                     <strong style={{ display: 'block', color: 'var(--color-text-main)' }}>{rev.name}</strong>
                     <span style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>주문상품: {rev.packageType}</span>
                   </div>
-                  <span style={{ color: 'var(--color-text-muted)' }}>{rev.date}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <span style={{ color: 'var(--color-text-muted)' }}>{rev.date}</span>
+                    {renderReviewEditButton(rev)}
+                  </div>
                 </div>
               </div>
             ))}
@@ -507,14 +823,10 @@ export const Reviews: React.FC<ReviewsProps> = ({ limit }) => {
                   </div>
 
                   {/* Review Content */}
-                  <div style={{ flex: 1, fontSize: '0.85rem', color: 'var(--color-text-sub)', lineHeight: 1.6 }}>
-                    {rev.title && (
-                      <strong style={{ display: 'block', color: 'var(--color-text-main)', marginBottom: '4px', fontSize: '0.88rem' }}>
-                        {rev.title}
-                      </strong>
-                    )}
-                    "{rev.content}"
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0', fontSize: '0.85rem', color: 'var(--color-text-sub)', lineHeight: 1.6 }}>
+                    {renderReviewEditableContent(rev, 'list')}
                   </div>
+                  {renderReviewEditButton(rev)}
                 </div>
               ))}
             </div>
