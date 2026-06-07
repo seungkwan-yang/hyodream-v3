@@ -804,15 +804,32 @@ app.put('/api/inquiries/:id', async (req, res) => {
     const previousPointsEarned = inquiry.points_earned || Math.floor(Number(inquiry.total_price || 0) * 0.01);
     let nextPointsUsed = pointsUsed ?? inquiry.points_used ?? 0;
 
+    if (newPaymentStatus === 'paid' && nextStatus === 'pending') {
+      nextStatus = 'approved';
+    }
+
     if (newPaymentStatus === 'cancelled') {
       nextStatus = 'cancelled';
     }
 
-    // If changing from pending to approved/completed, confirm payment and award points
     if (newPaymentStatus !== 'cancelled' && inquiry.payment_status !== 'paid' && (nextStatus === 'approved' || nextStatus === 'completed')) {
       newPaymentStatus = 'paid';
+    }
+
+    // Award points exactly when an unpaid/cancelled order becomes paid.
+    if (inquiry.payment_status !== 'paid' && newPaymentStatus === 'paid') {
       if (nextUserId) {
         await pool.query('UPDATE hd_users SET points = points + $1 WHERE username = $2', [nextPointsEarned, nextUserId]);
+      }
+    }
+
+    // If a paid order's amount changes, adjust only the earned-point delta.
+    if (inquiry.payment_status === 'paid' && newPaymentStatus === 'paid' && nextUserId && nextPointsEarned !== previousPointsEarned) {
+      const pointsDelta = nextPointsEarned - previousPointsEarned;
+      if (pointsDelta > 0) {
+        await pool.query('UPDATE hd_users SET points = points + $1 WHERE username = $2', [pointsDelta, nextUserId]);
+      } else {
+        await pool.query('UPDATE hd_users SET points = GREATEST(points - $1, 0) WHERE username = $2', [Math.abs(pointsDelta), nextUserId]);
       }
     }
 

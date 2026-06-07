@@ -434,7 +434,11 @@ export const UserList: React.FC = () => {
                                 setOrderDraft(prev => ({
                                   ...prev,
                                   paymentStatus: nextPaymentStatus,
-                                  status: nextPaymentStatus === 'cancelled' ? 'cancelled' : prev.status
+                                  status: nextPaymentStatus === 'cancelled'
+                                    ? 'cancelled'
+                                    : nextPaymentStatus === 'paid' && (!prev.status || prev.status === 'pending')
+                                      ? 'approved'
+                                      : prev.status
                                 }));
                               }}
                             >
