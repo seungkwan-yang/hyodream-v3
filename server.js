@@ -796,7 +796,8 @@ app.put('/api/inquiries/:id', async (req, res) => {
     }
 
     const inquiry = existing.rows[0];
-    let newPaymentStatus = paymentStatus || inquiry.payment_status;
+    const requestedPaymentStatus = paymentStatus || inquiry.payment_status;
+    let newPaymentStatus = requestedPaymentStatus;
     let nextStatus = status || inquiry.status;
     const nextTotalPrice = Number(totalPrice ?? inquiry.total_price);
     const nextPointsEarned = Math.floor(nextTotalPrice * 0.01);
@@ -804,11 +805,11 @@ app.put('/api/inquiries/:id', async (req, res) => {
     const previousPointsEarned = inquiry.points_earned || Math.floor(Number(inquiry.total_price || 0) * 0.01);
     let nextPointsUsed = pointsUsed ?? inquiry.points_used ?? 0;
 
-    if (newPaymentStatus === 'paid' && nextStatus === 'pending') {
+    if (requestedPaymentStatus === 'paid' && (nextStatus === 'pending' || nextStatus === 'cancelled')) {
       nextStatus = 'approved';
     }
 
-    if (newPaymentStatus === 'cancelled') {
+    if (requestedPaymentStatus === 'cancelled') {
       nextStatus = 'cancelled';
     }
 
@@ -847,6 +848,12 @@ app.put('/api/inquiries/:id', async (req, res) => {
       if (nextUserId && inquiry.points_used > 0) {
         await pool.query('UPDATE hd_users SET points = points + $1 WHERE username = $2', [inquiry.points_used, nextUserId]);
       }
+      nextPointsUsed = inquiry.points_used || 0;
+    }
+
+    // If a cancelled order is restored to paid, consume the previously refunded used points again.
+    if (inquiry.status === 'cancelled' && nextStatus !== 'cancelled' && newPaymentStatus === 'paid' && nextUserId && inquiry.points_used > 0) {
+      await pool.query('UPDATE hd_users SET points = GREATEST(points - $1, 0) WHERE username = $2', [inquiry.points_used, nextUserId]);
       nextPointsUsed = inquiry.points_used || 0;
     }
 
