@@ -438,6 +438,8 @@ export const UserList: React.FC = () => {
                                     ? 'cancelled'
                                     : nextPaymentStatus === 'paid' && (!prev.status || prev.status === 'pending' || prev.status === 'cancelled')
                                       ? 'approved'
+                                      : nextPaymentStatus === 'pending' && prev.status === 'cancelled'
+                                        ? 'pending'
                                       : prev.status
                                 }));
                               }}
