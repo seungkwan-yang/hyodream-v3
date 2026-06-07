@@ -138,9 +138,9 @@ interface AppContextType {
   // Inquiries
   inquiries: Inquiry[];
   addInquiry: (inquiry: Omit<Inquiry, 'id' | 'createdAt' | 'status'> & { status?: InquiryStatus, paymentMethod?: string, paymentStatus?: 'paid' | 'pending' | 'cancelled', tossTransactionId?: string }) => Inquiry;
-  updateInquiry: (id: string, updated: Partial<Inquiry>) => Promise<boolean>;
-  updateInquiryStatus: (id: string, status: InquiryStatus) => void;
-  updateInquiryNotes: (id: string, notes: string) => void;
+  updateInquiry: (id: string, updated: Partial<Inquiry>) => Promise<Inquiry | null>;
+  updateInquiryStatus: (id: string, status: InquiryStatus) => Promise<Inquiry | null>;
+  updateInquiryNotes: (id: string, notes: string) => Promise<Inquiry | null>;
   deleteInquiry: (id: string) => void;
 
   isLoading: boolean;
@@ -216,6 +216,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     loadDatabaseData();
   }, []);
+
+  const refreshInquiries = async () => {
+    const res = await fetch(`${API_BASE}/api/inquiries`);
+    if (!res.ok) {
+      throw new Error('주문 목록 새로고침 실패');
+    }
+    const latest = await res.json();
+    setInquiries(latest);
+    return latest as Inquiry[];
+  };
 
   // Save viewMode locally for layout conveniences
   useEffect(() => {
@@ -552,24 +562,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return newInquiry;
   };
 
-  const updateInquiryStatus = (id: string, status: InquiryStatus) => {
+  const updateInquiryStatus = async (id: string, status: InquiryStatus) => {
+    const base = inquiries.find(i => i.id === id);
+    if (!base) return null;
+
     setInquiries(prev =>
       prev.map(item => (item.id === id ? { ...item, status } : item))
     );
 
-    const inq = inquiries.find(i => i.id === id);
-    if (inq) {
-      fetch(`${API_BASE}/api/inquiries/${id}`, {
+    try {
+      const res = await fetch(`${API_BASE}/api/inquiries/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, adminNotes: inq.adminNotes || '' })
-      }).catch(err => console.error('[HyoDream DB Sync] updateInquiryStatus failed:', err));
+        body: JSON.stringify({ status, adminNotes: base.adminNotes || '' })
+      });
+
+      if (!res.ok) {
+        throw new Error((await res.json().catch(() => null))?.error || '주문 상태 수정 실패');
+      }
+
+      const saved = await res.json();
+      setInquiries(prev => prev.map(item => (item.id === id ? saved : item)));
+      await refreshInquiries().catch(err => console.error('[HyoDream DB Sync] refreshInquiries failed:', err));
+      return saved;
+    } catch (err) {
+      setInquiries(prev => prev.map(item => (item.id === id ? base : item)));
+      console.error('[HyoDream DB Sync] updateInquiryStatus failed:', err);
+      return null;
     }
   };
 
   const updateInquiry = async (id: string, updated: Partial<Inquiry>) => {
     const base = inquiries.find(i => i.id === id);
-    if (!base) return false;
+    if (!base) return null;
 
     const payload = { ...base, ...updated };
     setInquiries(prev => prev.map(item => (item.id === id ? payload : item)));
@@ -587,26 +612,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const saved = await res.json();
       setInquiries(prev => prev.map(item => (item.id === id ? saved : item)));
-      return true;
+      await refreshInquiries().catch(err => console.error('[HyoDream DB Sync] refreshInquiries failed:', err));
+      return saved;
     } catch (err) {
       setInquiries(prev => prev.map(item => (item.id === id ? base : item)));
       console.error('[HyoDream DB Sync] updateInquiry failed:', err);
-      return false;
+      return null;
     }
   };
 
-  const updateInquiryNotes = (id: string, notes: string) => {
+  const updateInquiryNotes = async (id: string, notes: string) => {
+    const base = inquiries.find(i => i.id === id);
+    if (!base) return null;
+
     setInquiries(prev =>
       prev.map(item => (item.id === id ? { ...item, adminNotes: notes } : item))
     );
 
-    const inq = inquiries.find(i => i.id === id);
-    if (inq) {
-      fetch(`${API_BASE}/api/inquiries/${id}`, {
+    try {
+      const res = await fetch(`${API_BASE}/api/inquiries/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: inq.status, adminNotes: notes })
-      }).catch(err => console.error('[HyoDream DB Sync] updateInquiryNotes failed:', err));
+        body: JSON.stringify({ status: base.status, adminNotes: notes })
+      });
+
+      if (!res.ok) {
+        throw new Error((await res.json().catch(() => null))?.error || '관리자 메모 수정 실패');
+      }
+
+      const saved = await res.json();
+      setInquiries(prev => prev.map(item => (item.id === id ? saved : item)));
+      await refreshInquiries().catch(err => console.error('[HyoDream DB Sync] refreshInquiries failed:', err));
+      return saved;
+    } catch (err) {
+      setInquiries(prev => prev.map(item => (item.id === id ? base : item)));
+      console.error('[HyoDream DB Sync] updateInquiryNotes failed:', err);
+      return null;
     }
   };
 

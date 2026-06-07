@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
 import type { Inquiry, InquiryStatus } from '../context/AppContext';
@@ -21,6 +21,15 @@ export const OrderList: React.FC = () => {
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>('all');
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
   const [noteText, setNoteText] = useState('');
+
+  useEffect(() => {
+    if (!selectedInquiry) return;
+    const latest = inquiries.find(item => item.id === selectedInquiry.id);
+    if (latest) {
+      setSelectedInquiry(latest);
+      setNoteText(latest.adminNotes || '');
+    }
+  }, [inquiries, selectedInquiry?.id]);
 
   // Use DB menus if loaded, otherwise fall back to hardcoded list
   const effectiveMenus = baseMenus.length > 0 ? baseMenus : FALLBACK_MENUS;
@@ -151,12 +160,11 @@ export const OrderList: React.FC = () => {
     setNoteText(inquiry.adminNotes || '');
   };
 
-  const handleStatusChange = (id: string, newStatus: InquiryStatus) => {
-    updateInquiryStatus(id, newStatus);
-    
-    // Update local selected state to refresh modal UI
-    if (selectedInquiry && selectedInquiry.id === id) {
-      setSelectedInquiry(prev => prev ? { ...prev, status: newStatus } : null);
+  const handleStatusChange = async (id: string, newStatus: InquiryStatus) => {
+    const saved = await updateInquiryStatus(id, newStatus);
+    if (!saved) {
+      alert('주문 상태 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+      return;
     }
 
     // Celebration on Completion
@@ -170,11 +178,14 @@ export const OrderList: React.FC = () => {
     }
   };
 
-  const handleSaveNotes = () => {
+  const handleSaveNotes = async () => {
     if (selectedInquiry) {
-      updateInquiryNotes(selectedInquiry.id, noteText);
-      setSelectedInquiry(prev => prev ? { ...prev, adminNotes: noteText } : null);
-      alert('관리자 메모가 임시 저장되었습니다.');
+      const saved = await updateInquiryNotes(selectedInquiry.id, noteText);
+      if (!saved) {
+        alert('관리자 메모 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+        return;
+      }
+      alert('관리자 메모가 저장되었습니다.');
     }
   };
 
@@ -193,6 +204,7 @@ export const OrderList: React.FC = () => {
       case 'approved': return <CheckCircle size={15} />;
       case 'processing': return <Truck size={15} />;
       case 'completed': return <Award size={15} />;
+      case 'cancelled': return <X size={15} />;
     }
   };
 
@@ -202,6 +214,7 @@ export const OrderList: React.FC = () => {
       case 'approved': return '결제완료';
       case 'processing': return '배송준비';
       case 'completed': return '배송완료';
+      case 'cancelled': return '주문취소';
     }
   };
 

@@ -17,7 +17,7 @@ interface MyReview {
 }
 
 export const MyPage: React.FC = () => {
-  const { currentUser, setCurrentUser, setCustomerTab } = useApp();
+  const { currentUser, setCurrentUser, setCustomerTab, inquiries } = useApp();
   const [orders, setOrders] = useState<any[]>([]);
   const [reviews, setReviews] = useState<MyReview[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +57,20 @@ export const MyPage: React.FC = () => {
 
     fetchOrders();
   }, [currentUser, setCustomerTab]);
+
+  useEffect(() => {
+    if (!currentUser || inquiries.length === 0) return;
+    setOrders(
+      inquiries
+        .filter(order => order.userId === currentUser.username)
+        .sort((a, b) => {
+          const dateA = new Date(a.createdAt || a.date).getTime();
+          const dateB = new Date(b.createdAt || b.date).getTime();
+          return dateB - dateA;
+        })
+    );
+    setLoading(false);
+  }, [currentUser, inquiries]);
 
   const handleLogout = () => {
     setCurrentUser(null);
