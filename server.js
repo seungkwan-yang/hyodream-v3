@@ -121,8 +121,31 @@ pool.on('error', (err) => {
 
 const ensureReviewAdminReplyColumn = async () => {
   await pool.query('ALTER TABLE hd_reviews ADD COLUMN IF NOT EXISTS admin_reply TEXT DEFAULT NULL;');
+  await pool.query('ALTER TABLE hd_reviews ADD COLUMN IF NOT EXISTS review_hidden BOOLEAN DEFAULT FALSE NOT NULL;');
   await pool.query('ALTER TABLE hd_reviews ADD COLUMN IF NOT EXISTS user_id VARCHAR(50);');
 };
+
+const mapReview = (row, { admin = false } = {}) => ({
+  id: row.id,
+  name: row.name,
+  rating: row.rating,
+  date: row.date,
+  title: row.title,
+  content: row.content,
+  packageType: row.packageType ?? row.package_type,
+  imageUrl: row.imageUrl ?? row.image_url,
+  adminReply: row.adminReply ?? row.admin_reply,
+  reviewHidden: Boolean(row.reviewHidden ?? row.review_hidden),
+  userId: row.userId ?? row.user_id,
+});
+
+const reviewSelect = `
+  SELECT id, name, rating, date, title, content,
+    package_type as "packageType", image_url as "imageUrl",
+    admin_reply as "adminReply", review_hidden as "reviewHidden",
+    user_id as "userId"
+  FROM hd_reviews
+`;
 
 // Database Auto-Seeding (Self-Healing Migration)
 async function seedDatabase() {
@@ -316,6 +339,9 @@ async function seedDatabase() {
           content TEXT NOT NULL,
           package_type VARCHAR(150) NOT NULL,
           image_url TEXT,
+          admin_reply TEXT DEFAULT NULL,
+          review_hidden BOOLEAN DEFAULT FALSE NOT NULL,
+          user_id VARCHAR(50),
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
@@ -324,6 +350,7 @@ async function seedDatabase() {
     await client.query('ALTER TABLE hd_reviews ADD COLUMN IF NOT EXISTS title VARCHAR(200) DEFAULT \'\';');
     // Self-healing schema migration: ensure column 'admin_reply' exists for admin comments feature
     await client.query('ALTER TABLE hd_reviews ADD COLUMN IF NOT EXISTS admin_reply TEXT DEFAULT NULL;');
+    await client.query('ALTER TABLE hd_reviews ADD COLUMN IF NOT EXISTS review_hidden BOOLEAN DEFAULT FALSE NOT NULL;');
     await client.query('ALTER TABLE hd_reviews ADD COLUMN IF NOT EXISTS user_id VARCHAR(50);');
     
     const reviewCheck = await client.query('SELECT COUNT(*) FROM hd_reviews');
@@ -1043,8 +1070,42 @@ app.delete('/api/inquiries/:id', async (req, res) => {
 app.get('/api/reviews', async (req, res) => {
   try {
     await ensureReviewAdminReplyColumn();
-    const result = await pool.query('SELECT id, name, rating, date, title, content, package_type as "packageType", image_url as "imageUrl", admin_reply as "adminReply", user_id as "userId" FROM hd_reviews ORDER BY id DESC');
-    res.json(result.rows);
+    const admin = req.query.admin === '1';
+    const pageParam = Number(req.query.page || 0);
+    const pageSizeParam = Number(req.query.pageSize || 0);
+    const keyword = String(req.query.q || '').trim();
+
+    if (pageParam > 0 || pageSizeParam > 0 || keyword) {
+      const page = Math.max(1, pageParam || 1);
+      const pageSize = Math.min(100, Math.max(10, pageSizeParam || 20));
+      const offset = (page - 1) * pageSize;
+      const values = [];
+      const whereParts = admin ? [] : ['review_hidden = false'];
+
+      if (keyword) {
+        values.push(`%${keyword.toLowerCase()}%`);
+        whereParts.push(`lower(coalesce(name, '') || ' ' || coalesce(title, '') || ' ' || coalesce(content, '') || ' ' || coalesce(package_type, '') || ' ' || coalesce(admin_reply, '')) LIKE $${values.length}`);
+      }
+      const where = whereParts.length > 0 ? `WHERE ${whereParts.join(' AND ')}` : '';
+
+      const countResult = await pool.query(`SELECT COUNT(*)::int AS count FROM hd_reviews ${where}`, values);
+      const total = Number(countResult.rows[0]?.count || 0);
+      const result = await pool.query(
+        `${reviewSelect} ${where} ORDER BY id DESC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
+        [...values, pageSize, offset]
+      );
+
+      return res.json({
+        items: result.rows.map(row => mapReview(row, { admin })),
+        total,
+        page,
+        pageSize,
+        totalPages: Math.max(1, Math.ceil(total / pageSize))
+      });
+    }
+
+    const result = await pool.query(`${reviewSelect} WHERE review_hidden = false ORDER BY id DESC`);
+    res.json(result.rows.map(row => mapReview(row)));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1055,10 +1116,10 @@ app.post('/api/reviews', async (req, res) => {
   try {
     await ensureReviewAdminReplyColumn();
     const result = await pool.query(
-      'INSERT INTO hd_reviews (name, rating, date, title, content, package_type, image_url, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, name, rating, date, title, content, package_type as "packageType", image_url as "imageUrl", admin_reply as "adminReply", user_id as "userId"',
+      'INSERT INTO hd_reviews (name, rating, date, title, content, package_type, image_url, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
       [name, rating, date, title || '', content, packageType, imageUrl || null, userId || null]
     );
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(mapReview(result.rows[0]));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1068,10 +1129,10 @@ app.get('/api/users/:username/reviews', async (req, res) => {
   try {
     await ensureReviewAdminReplyColumn();
     const result = await pool.query(
-      'SELECT id, name, rating, date, title, content, package_type as "packageType", image_url as "imageUrl", admin_reply as "adminReply", user_id as "userId" FROM hd_reviews WHERE user_id = $1 ORDER BY id DESC',
+      `${reviewSelect} WHERE user_id = $1 AND review_hidden = false ORDER BY id DESC`,
       [req.params.username]
     );
-    res.json(result.rows);
+    res.json(result.rows.map(row => mapReview(row)));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1091,13 +1152,30 @@ app.put('/api/reviews/:id', async (req, res) => {
       `UPDATE hd_reviews
        SET rating = $1, title = $2, content = $3, package_type = $4, image_url = $5
        WHERE id = $6 AND user_id = $7
-       RETURNING id, name, rating, date, title, content, package_type as "packageType", image_url as "imageUrl", admin_reply as "adminReply", user_id as "userId"`,
+       RETURNING *`,
       [rating, title, content, packageType, imageUrl || null, id, userId]
     );
     if (result.rows.length === 0) {
       return res.status(403).json({ error: '본인이 작성한 후기만 수정할 수 있습니다.' });
     }
-    res.json(result.rows[0]);
+    res.json(mapReview(result.rows[0]));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/reviews/:id/visibility — Admin hides/shows a review from customer pages
+app.put('/api/reviews/:id/visibility', async (req, res) => {
+  const { id } = req.params;
+  const { reviewHidden } = req.body;
+  try {
+    await ensureReviewAdminReplyColumn();
+    const result = await pool.query(
+      'UPDATE hd_reviews SET review_hidden = $1 WHERE id = $2 RETURNING *',
+      [Boolean(reviewHidden), id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Review not found' });
+    res.json(mapReview(result.rows[0], { admin: true }));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1110,11 +1188,11 @@ app.put('/api/reviews/:id/reply', async (req, res) => {
   try {
     await ensureReviewAdminReplyColumn();
     const result = await pool.query(
-      'UPDATE hd_reviews SET admin_reply = $1 WHERE id = $2 RETURNING id, name, rating, date, title, content, package_type as "packageType", image_url as "imageUrl", admin_reply as "adminReply", user_id as "userId"',
+      'UPDATE hd_reviews SET admin_reply = $1 WHERE id = $2 RETURNING *',
       [adminReply || null, id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Review not found' });
-    res.json(result.rows[0]);
+    res.json(mapReview(result.rows[0], { admin: true }));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

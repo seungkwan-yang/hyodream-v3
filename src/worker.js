@@ -291,6 +291,7 @@ const ensureSchema = async (env) => {
       package_type VARCHAR(150) NOT NULL,
       image_url TEXT,
       admin_reply TEXT DEFAULT NULL,
+      review_hidden BOOLEAN DEFAULT FALSE NOT NULL,
       user_id VARCHAR(50),
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
@@ -300,6 +301,7 @@ const ensureSchema = async (env) => {
   await query(env, 'ALTER TABLE hd_inquiries ADD COLUMN IF NOT EXISTS points_used INTEGER DEFAULT 0;');
   await query(env, 'ALTER TABLE hd_reviews ADD COLUMN IF NOT EXISTS title VARCHAR(200) DEFAULT \'\';');
   await query(env, 'ALTER TABLE hd_reviews ADD COLUMN IF NOT EXISTS admin_reply TEXT DEFAULT NULL;');
+  await query(env, 'ALTER TABLE hd_reviews ADD COLUMN IF NOT EXISTS review_hidden BOOLEAN DEFAULT FALSE NOT NULL;');
   await query(env, 'ALTER TABLE hd_reviews ADD COLUMN IF NOT EXISTS user_id VARCHAR(50);');
 };
 
@@ -383,6 +385,28 @@ const mapInquiry = (row) => ({
   pointsEarned: row.points_earned,
   pointsUsed: row.points_used,
 });
+
+const mapReview = (row, { admin = false } = {}) => ({
+  id: row.id,
+  name: row.name,
+  rating: row.rating,
+  date: row.date,
+  title: row.title,
+  content: row.content,
+  packageType: row.packageType ?? row.package_type,
+  imageUrl: row.imageUrl ?? row.image_url,
+  adminReply: row.adminReply ?? row.admin_reply,
+  reviewHidden: Boolean(row.reviewHidden ?? row.review_hidden),
+  userId: row.userId ?? row.user_id,
+});
+
+const reviewSelect = `
+  SELECT id, name, rating, date, title, content,
+    package_type as "packageType", image_url as "imageUrl",
+    admin_reply as "adminReply", review_hidden as "reviewHidden",
+    user_id as "userId"
+  FROM hd_reviews
+`;
 
 const inquirySelect = `
   SELECT id, customer_name, phone, ritual_type, date, time_slot, address, address_detail,
@@ -643,8 +667,9 @@ const handleApi = async (request, env) => {
 
   params = match(pathname, '/api/users/:username/reviews');
   if (params && method === 'GET') {
-    const result = await query(env, 'SELECT id, name, rating, date, title, content, package_type as "packageType", image_url as "imageUrl", admin_reply as "adminReply", user_id as "userId" FROM hd_reviews WHERE user_id = $1 ORDER BY id DESC', [params.username]);
-    return json(result.rows);
+    await ensureSchema(env);
+    const result = await query(env, `${reviewSelect} WHERE user_id = $1 AND review_hidden = false ORDER BY id DESC`, [params.username]);
+    return json(result.rows.map(row => mapReview(row)));
   }
 
   params = match(pathname, '/api/users/:username');
@@ -881,22 +906,69 @@ const handleApi = async (request, env) => {
   }
 
   if (pathname === '/api/reviews' && method === 'GET') {
-    const result = await query(env, 'SELECT id, name, rating, date, title, content, package_type as "packageType", image_url as "imageUrl", admin_reply as "adminReply", user_id as "userId" FROM hd_reviews ORDER BY id DESC');
-    return json(result.rows);
+    await ensureSchema(env);
+    const admin = url.searchParams.get('admin') === '1';
+    const pageParam = Number(url.searchParams.get('page') || 0);
+    const pageSizeParam = Number(url.searchParams.get('pageSize') || 0);
+    const keyword = cleanEnvValue(url.searchParams.get('q') || '');
+
+    if (pageParam > 0 || pageSizeParam > 0 || keyword) {
+      const page = Math.max(1, pageParam || 1);
+      const pageSize = Math.min(100, Math.max(10, pageSizeParam || 20));
+      const offset = (page - 1) * pageSize;
+      const values = [];
+      const whereParts = admin ? [] : ['review_hidden = false'];
+
+      if (keyword) {
+        values.push(`%${keyword.toLowerCase()}%`);
+        whereParts.push(`lower(coalesce(name, '') || ' ' || coalesce(title, '') || ' ' || coalesce(content, '') || ' ' || coalesce(package_type, '') || ' ' || coalesce(admin_reply, '')) LIKE $${values.length}`);
+      }
+      const where = whereParts.length > 0 ? `WHERE ${whereParts.join(' AND ')}` : '';
+
+      const countResult = await query(env, `SELECT COUNT(*)::int AS count FROM hd_reviews ${where}`, values);
+      const total = Number(countResult.rows[0]?.count || 0);
+      const result = await query(
+        env,
+        `${reviewSelect} ${where} ORDER BY id DESC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
+        [...values, pageSize, offset],
+      );
+
+      return json({
+        items: result.rows.map(row => mapReview(row, { admin })),
+        total,
+        page,
+        pageSize,
+        totalPages: Math.max(1, Math.ceil(total / pageSize)),
+      });
+    }
+
+    const result = await query(env, `${reviewSelect} WHERE review_hidden = false ORDER BY id DESC`);
+    return json(result.rows.map(row => mapReview(row)));
   }
 
   if (pathname === '/api/reviews' && method === 'POST') {
     const { name, rating, date, title, content, packageType, imageUrl, userId } = await readJson(request);
-    const result = await query(env, 'INSERT INTO hd_reviews (name, rating, date, title, content, package_type, image_url, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, name, rating, date, title, content, package_type as "packageType", image_url as "imageUrl", admin_reply as "adminReply", user_id as "userId"', [name, rating, date, title || '', content, packageType, imageUrl || null, userId || null]);
-    return json(result.rows[0], 201);
+    await ensureSchema(env);
+    const result = await query(env, `INSERT INTO hd_reviews (name, rating, date, title, content, package_type, image_url, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`, [name, rating, date, title || '', content, packageType, imageUrl || null, userId || null]);
+    return json(mapReview(result.rows[0]), 201);
+  }
+
+  params = match(pathname, '/api/reviews/:id/visibility');
+  if (params && method === 'PUT') {
+    const { reviewHidden } = await readJson(request);
+    await ensureSchema(env);
+    const result = await query(env, 'UPDATE hd_reviews SET review_hidden = $1 WHERE id = $2 RETURNING *', [Boolean(reviewHidden), params.id]);
+    if (result.rows.length === 0) return errorJson('Review not found', 404);
+    return json(mapReview(result.rows[0], { admin: true }));
   }
 
   params = match(pathname, '/api/reviews/:id/reply');
   if (params && method === 'PUT') {
     const { adminReply } = await readJson(request);
-    const result = await query(env, 'UPDATE hd_reviews SET admin_reply = $1 WHERE id = $2 RETURNING id, name, rating, date, title, content, package_type as "packageType", image_url as "imageUrl", admin_reply as "adminReply", user_id as "userId"', [adminReply || null, params.id]);
+    await ensureSchema(env);
+    const result = await query(env, 'UPDATE hd_reviews SET admin_reply = $1 WHERE id = $2 RETURNING *', [adminReply || null, params.id]);
     if (result.rows.length === 0) return errorJson('Review not found', 404);
-    return json(result.rows[0]);
+    return json(mapReview(result.rows[0], { admin: true }));
   }
 
   params = match(pathname, '/api/reviews/:id');
@@ -904,9 +976,10 @@ const handleApi = async (request, env) => {
     const { userId, rating, title, content, packageType, imageUrl } = await readJson(request);
     if (!userId) return errorJson('로그인 사용자 정보가 필요합니다.', 400);
     if (!title || !content || String(content).trim().length < 10) return errorJson('후기 제목과 10자 이상의 내용을 입력해 주세요.', 400);
-    const result = await query(env, 'UPDATE hd_reviews SET rating = $1, title = $2, content = $3, package_type = $4, image_url = $5 WHERE id = $6 AND user_id = $7 RETURNING id, name, rating, date, title, content, package_type as "packageType", image_url as "imageUrl", admin_reply as "adminReply", user_id as "userId"', [rating, title, content, packageType, imageUrl || null, params.id, userId]);
+    await ensureSchema(env);
+    const result = await query(env, 'UPDATE hd_reviews SET rating = $1, title = $2, content = $3, package_type = $4, image_url = $5 WHERE id = $6 AND user_id = $7 RETURNING *', [rating, title, content, packageType, imageUrl || null, params.id, userId]);
     if (result.rows.length === 0) return errorJson('본인이 작성한 후기만 수정할 수 있습니다.', 403);
-    return json(result.rows[0]);
+    return json(mapReview(result.rows[0]));
   }
 
   if (params && method === 'DELETE') {
