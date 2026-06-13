@@ -1,0 +1,23 @@
+name = "hyodream-v3"
+main = "src/worker.js"
+compatibility_date = "2026-06-13"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+# Set DATABASE_URL as a secret:
+# npx wrangler secret put DATABASE_URL
+#
+# Optional schema migration endpoint guard:
+# npx wrangler secret put MIGRATION_TOKEN
+#
+# Optional but recommended for Cloudflare-native image uploads:
+# 1. npx wrangler r2 bucket create hyodream-uploads
+# 2. Uncomment this binding.
+#
+ [[r2_buckets]]
+ binding = "UPLOADS_BUCKET"
+ bucket_name = "hyodream-uploads"

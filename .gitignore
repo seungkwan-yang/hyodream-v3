@@ -26,4 +26,7 @@ dist-ssr
 .env
 .env.local
 .env.development
+.dev.vars
+.dev.vars.*
+.wrangler
 public/uploads/*
