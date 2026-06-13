@@ -1,8 +1,6 @@
 import { Pool } from '@neondatabase/serverless';
 import bcrypt from 'bcryptjs';
 
-const poolCache = new Map();
-
 const json = (data, status = 200, headers = {}) =>
   new Response(JSON.stringify(data), {
     status,
@@ -19,16 +17,13 @@ const errorJson = (error, status = 500) =>
 const getConnectionString = (env) =>
   env.HYPERDRIVE?.connectionString || env.DATABASE_URL;
 
-const getPool = (env) => {
+const createPool = (env) => {
   const connectionString = getConnectionString(env);
   if (!connectionString) {
     throw new Error('DATABASE_URL or HYPERDRIVE binding is required.');
   }
 
-  if (!poolCache.has(connectionString)) {
-    poolCache.set(connectionString, new Pool({ connectionString }));
-  }
-  return poolCache.get(connectionString);
+  return new Pool({ connectionString });
 };
 
 const getTossConfig = (env) => ({
@@ -40,10 +35,18 @@ const getTossConfig = (env) => ({
   environment: env.TOSS_ENVIRONMENT || env.VITE_TOSS_ENVIRONMENT || 'test',
 });
 
-const query = (env, text, params = []) => getPool(env).query(text, params);
+const query = async (env, text, params = []) => {
+  const pool = createPool(env);
+  try {
+    return await pool.query(text, params);
+  } finally {
+    await pool.end();
+  }
+};
 
 const withTransaction = async (env, fn) => {
-  const client = await getPool(env).connect();
+  const pool = createPool(env);
+  const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const result = await fn(client);
@@ -54,6 +57,7 @@ const withTransaction = async (env, fn) => {
     throw err;
   } finally {
     client.release();
+    await pool.end();
   }
 };
 
@@ -273,6 +277,28 @@ const handleApi = async (request, env) => {
 
   if (pathname === '/api/health') {
     return json({ ok: true, runtime: 'cloudflare-workers' });
+  }
+
+  if (pathname === '/api/db-health') {
+    const hasDatabaseUrl = Boolean(env.DATABASE_URL);
+    const hasHyperdrive = Boolean(env.HYPERDRIVE?.connectionString);
+    if (!hasDatabaseUrl && !hasHyperdrive) {
+      return json({
+        ok: false,
+        hasDatabaseUrl,
+        hasHyperdrive,
+        error: 'DATABASE_URL or HYPERDRIVE binding is required.',
+      }, 500);
+    }
+
+    const result = await query(env, 'SELECT 1 AS ok, current_database() AS database, current_user AS "user"');
+    return json({
+      ok: true,
+      hasDatabaseUrl,
+      hasHyperdrive,
+      database: result.rows[0]?.database,
+      user: result.rows[0]?.user,
+    });
   }
 
   if (pathname === '/api/payments/toss/config' && method === 'GET') {
