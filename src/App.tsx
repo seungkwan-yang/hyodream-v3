@@ -15,6 +15,99 @@ import { RegisterAgreement } from './components/RegisterAgreement';
 import { RegisterForm } from './components/RegisterForm';
 import { MyPage } from './components/MyPage';
 import { Phone, MapPin } from 'lucide-react';
+import { TOSS_PENDING_ORDER_KEY } from './config/toss';
+
+const PaymentReturnHandler: React.FC = () => {
+  const { addInquiry, setCustomerTab } = useApp();
+  const [message, setMessage] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentResult = params.get('paymentResult');
+
+    if (paymentResult === 'fail') {
+      const reason = params.get('message') || '결제가 취소되었거나 실패했습니다.';
+      localStorage.removeItem(TOSS_PENDING_ORDER_KEY);
+      setMessage(reason);
+      window.history.replaceState({}, '', window.location.pathname);
+      return;
+    }
+
+    if (paymentResult !== 'success') return;
+
+    const paymentKey = params.get('paymentKey');
+    const orderId = params.get('orderId');
+    const amount = Number(params.get('amount'));
+    const rawPendingOrder = localStorage.getItem(TOSS_PENDING_ORDER_KEY);
+
+    const confirmPayment = async () => {
+      try {
+        if (!paymentKey || !orderId || !amount || !rawPendingOrder) {
+          throw new Error('결제 승인에 필요한 정보가 없습니다.');
+        }
+
+        const pendingOrder = JSON.parse(rawPendingOrder);
+        if (pendingOrder.orderId !== orderId || Number(pendingOrder.tossAmount) !== amount) {
+          throw new Error('결제 정보가 주문 정보와 일치하지 않습니다.');
+        }
+
+        setMessage('Toss Payments 결제를 승인하고 있습니다...');
+        const response = await fetch('/api/payments/toss/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paymentKey, orderId, amount }),
+        });
+
+        const payment = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(payment?.error || payment?.message || '결제 승인에 실패했습니다.');
+        }
+
+        const methodLabel = pendingOrder.paymentMethod || payment.method || '토스페이';
+        addInquiry({
+          ...pendingOrder.order,
+          paymentMethod: methodLabel,
+          paymentStatus: payment.status === 'WAITING_FOR_DEPOSIT' ? 'pending' : 'paid',
+          status: payment.status === 'WAITING_FOR_DEPOSIT' ? 'pending' : 'approved',
+          tossTransactionId: payment.paymentKey || paymentKey,
+        });
+
+        localStorage.removeItem(TOSS_PENDING_ORDER_KEY);
+        window.history.replaceState({}, '', window.location.pathname);
+        setCustomerTab('mypage');
+        setMessage('결제가 승인되었습니다. 주문 내역으로 이동합니다.');
+      } catch (err) {
+        console.error('[HyoDream Toss] confirm failed:', err);
+        setMessage(err instanceof Error ? err.message : '결제 승인 처리 중 오류가 발생했습니다.');
+      }
+    };
+
+    confirmPayment();
+  }, [addInquiry, setCustomerTab]);
+
+  if (!message) return null;
+
+  return (
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 3000,
+      backgroundColor: 'rgba(0, 0, 0, 0.45)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '20px'
+    }}>
+      <div className="premium-card" style={{ maxWidth: '420px', width: '100%', textAlign: 'center', padding: '28px' }}>
+        <strong style={{ display: 'block', marginBottom: '10px' }}>Toss Payments</strong>
+        <p style={{ color: 'var(--color-text-sub)', lineHeight: 1.5 }}>{message}</p>
+        <button className="btn-primary" onClick={() => setMessage(null)} style={{ marginTop: '16px' }}>
+          확인
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const AppContent: React.FC = () => {
   const { viewMode, customerTab, checkoutIntentStep, isLoading } = useApp();
@@ -112,6 +205,7 @@ const AppContent: React.FC = () => {
     }}>
       {/* Universal Sticky Header (includes View Mode Toggle Switch) */}
       <Header />
+      <PaymentReturnHandler />
 
       {/* Primary Workspace Panel */}
       {viewMode === 'admin' ? (

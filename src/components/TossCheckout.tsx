@@ -1,11 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, ShieldCheck, Check, Smartphone, Landmark, AlertCircle, Loader2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { tossClientConfig, isTossClientConfigured } from '../config/toss';
+import { TOSS_PENDING_ORDER_KEY } from '../config/toss';
+
+declare global {
+  interface Window {
+    TossPayments?: (clientKey: string) => {
+      payment: (options: { customerKey: string }) => {
+        requestPayment: (options: Record<string, unknown>) => Promise<void>;
+      };
+    };
+  }
+}
+
+type PendingTossOrder = {
+  tossAmount: number;
+  order: Record<string, unknown>;
+};
 
 interface TossCheckoutProps {
   amount: number;
   orderName: string;
   customerName: string;
+  customerMobilePhone?: string;
+  pendingOrder: PendingTossOrder;
   onSuccess: (paymentMethod: string, transactionId: string) => void;
   onCancel: () => void;
 }
@@ -14,6 +33,8 @@ export const TossCheckout: React.FC<TossCheckoutProps> = ({
   amount,
   orderName,
   customerName,
+  customerMobilePhone,
+  pendingOrder,
   onSuccess,
   onCancel
 }) => {
@@ -32,16 +53,102 @@ export const TossCheckout: React.FC<TossCheckoutProps> = ({
     { id: 'nh', label: 'NH농협카드', color: '#009944' }
   ];
 
+  const loadTossPaymentsSdk = () =>
+    new Promise<void>((resolve, reject) => {
+      if (window.TossPayments) {
+        resolve();
+        return;
+      }
+
+      const existing = document.querySelector<HTMLScriptElement>('script[data-toss-payments-sdk="true"]');
+      if (existing) {
+        existing.addEventListener('load', () => resolve(), { once: true });
+        existing.addEventListener('error', () => reject(new Error('Toss Payments SDK 로드 실패')), { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://js.tosspayments.com/v2/standard';
+      script.async = true;
+      script.dataset.tossPaymentsSdk = 'true';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Toss Payments SDK 로드 실패'));
+      document.head.appendChild(script);
+    });
+
+  const getPaymentMethodLabel = () => {
+    if (method === 'card') {
+      const card = cardOptions.find(c => c.id === selectedCard);
+      return `신용카드 (${card?.label || '신한카드'})`;
+    }
+    if (method === 'transfer') return '실시간 계좌이체';
+    if (method === 'virtual') return '가상계좌 (무통장)';
+    return '토스페이';
+  };
+
+  const getTossMethod = () => {
+    if (method === 'transfer') return 'TRANSFER';
+    if (method === 'virtual') return 'VIRTUAL_ACCOUNT';
+    return 'CARD';
+  };
+
+  const normalizePhone = (value?: string) => (value || '').replace(/[^0-9]/g, '');
+
+  const requestRealTossPayment = async () => {
+    if (!isTossClientConfigured) {
+      alert('Toss Payments 클라이언트 키가 설정되지 않았습니다.');
+      return;
+    }
+
+    setStep('processing');
+    const orderId = `HD${Date.now()}${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+    const successUrl = new URL(window.location.href);
+    successUrl.search = '';
+    successUrl.searchParams.set('paymentResult', 'success');
+    const failUrl = new URL(window.location.href);
+    failUrl.search = '';
+    failUrl.searchParams.set('paymentResult', 'fail');
+
+    localStorage.setItem(TOSS_PENDING_ORDER_KEY, JSON.stringify({
+      ...pendingOrder,
+      orderId,
+      paymentMethod: getPaymentMethodLabel(),
+      createdAt: new Date().toISOString(),
+    }));
+
+    await loadTossPaymentsSdk();
+    const tossPayments = window.TossPayments?.(tossClientConfig.clientKey);
+    if (!tossPayments) {
+      throw new Error('Toss Payments SDK 초기화 실패');
+    }
+
+    const payment = tossPayments.payment({
+      customerKey: tossClientConfig.customerKey || `HD_CUSTOMER_${Date.now()}`,
+    });
+
+    await payment.requestPayment({
+      method: getTossMethod(),
+      amount: {
+        currency: 'KRW',
+        value: amount,
+      },
+      orderId,
+      orderName,
+      successUrl: successUrl.toString(),
+      failUrl: failUrl.toString(),
+      customerName,
+      customerMobilePhone: normalizePhone(customerMobilePhone),
+    });
+  };
+
   // Start checkout processing animation
   const handlePaymentSubmit = () => {
-    if (method === 'tosspay') {
-      setStep('biometric');
-    } else if (method === 'card') {
-      setStep('card_password');
-    } else {
-      // Transfer/Virtual Account goes straight to processing
-      startProcessing();
-    }
+    requestRealTossPayment().catch((err) => {
+      console.error('[HyoDream Toss] requestPayment failed:', err);
+      localStorage.removeItem(TOSS_PENDING_ORDER_KEY);
+      alert(err instanceof Error ? err.message : 'Toss Payments 결제 요청에 실패했습니다.');
+      setStep('select');
+    });
   };
 
   const startProcessing = () => {
@@ -88,17 +195,7 @@ export const TossCheckout: React.FC<TossCheckoutProps> = ({
   const [finalTxId] = useState(() => generateTxId());
 
   const handleFinalConfirm = () => {
-    let methodLabel = '토스페이';
-    if (method === 'card') {
-      const card = cardOptions.find(c => c.id === selectedCard);
-      methodLabel = `신용카드 (${card?.label || '신한카드'})`;
-    } else if (method === 'transfer') {
-      methodLabel = '실시간 계좌이체';
-    } else if (method === 'virtual') {
-      methodLabel = '가상계좌 (무통장)';
-    }
-
-    onSuccess(methodLabel, finalTxId);
+    onSuccess(getPaymentMethodLabel(), finalTxId);
   };
 
   return (
@@ -173,7 +270,7 @@ export const TossCheckout: React.FC<TossCheckoutProps> = ({
               padding: '16px 20px',
               marginBottom: '24px'
             }}>
-              <span style={{ fontSize: '0.75rem', color: '#6B7684', display: 'block', marginBottom: '4px' }}>가맹점명: 효드림</span>
+              <span style={{ fontSize: '0.75rem', color: '#6B7684', display: 'block', marginBottom: '4px' }}>가맹점명: {tossClientConfig.merchantName}</span>
               <strong style={{ fontSize: '0.95rem', color: '#191F28', display: 'block' }}>{orderName}</strong>
               <div style={{
                 borderTop: '1px solid #E5E8EB',
@@ -504,7 +601,7 @@ export const TossCheckout: React.FC<TossCheckoutProps> = ({
             <Loader2 size={40} style={{ color: '#0050FF', margin: '0 auto 20px auto', animation: 'spin 1.5s linear infinite' }} />
             
             <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#191F28', display: 'block', marginBottom: '8px' }}>
-              토스 페이먼츠 안전 결제 진행 중
+              토스 페이먼츠 결제창으로 이동 중
             </span>
             <span style={{ fontSize: '0.8rem', color: '#6B7684', display: 'block', marginBottom: '24px' }}>
               신용 거래 보호 기술에 의해 거래가 안전하게 처리 중입니다

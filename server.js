@@ -71,6 +71,15 @@ const pool = new Pool({
   connectionString: databaseUrl,
 });
 
+const tossConfig = {
+  clientKey: process.env.TOSS_CLIENT_KEY || process.env.VITE_TOSS_CLIENT_KEY || '',
+  secretKey: process.env.TOSS_SECRET_KEY || '',
+  securityToken: process.env.TOSS_SECURITY_TOKEN || '',
+  webhookSecret: process.env.TOSS_WEBHOOK_SECRET || '',
+  merchantName: process.env.TOSS_MERCHANT_NAME || process.env.VITE_TOSS_MERCHANT_NAME || '효드림',
+  environment: process.env.TOSS_ENVIRONMENT || process.env.VITE_TOSS_ENVIRONMENT || 'test',
+};
+
 // Prevent application crash on unhandled database errors
 pool.on('error', (err) => {
   console.error('[HyoDream DB Pool] Unexpected database connection error:', err);
@@ -315,6 +324,49 @@ async function seedDatabase() {
 }
 
 // REST API 라우트 설계
+
+app.get('/api/payments/toss/config', (_req, res) => {
+  res.json({
+    clientKey: tossConfig.clientKey,
+    merchantName: tossConfig.merchantName,
+    environment: tossConfig.environment,
+    enabled: Boolean(tossConfig.clientKey),
+    serverConfigured: Boolean(tossConfig.secretKey),
+    webhookConfigured: Boolean(tossConfig.webhookSecret || tossConfig.securityToken),
+  });
+});
+
+app.post('/api/payments/toss/confirm', async (req, res) => {
+  const { paymentKey, orderId, amount } = req.body;
+
+  if (!tossConfig.secretKey) {
+    return res.status(500).json({ error: 'TOSS_SECRET_KEY is not configured.' });
+  }
+
+  try {
+    const encodedSecretKey = Buffer.from(`${tossConfig.secretKey}:`).toString('base64');
+    const response = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${encodedSecretKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ paymentKey, orderId, amount }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      return res.status(response.status).json({
+        error: result.message || 'Toss Payments confirm failed.',
+        code: result.code,
+      });
+    }
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // 0. Auth & Users
 app.post('/api/auth/register', async (req, res) => {

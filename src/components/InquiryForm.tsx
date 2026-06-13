@@ -205,6 +205,32 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
     });
   };
 
+  const getPendingTossOrder = () => {
+    const customizations = initialConfig.selectedAdditions.map(a => a.name);
+    const subtractions = initialConfig.selectedSubtractions.map(s => s.name);
+
+    return {
+      tossAmount: initialConfig.calculatedTotal - appliedPoints,
+      order: {
+        customerName,
+        phone,
+        ritualType: initialConfig.selectedPackage.name,
+        date,
+        timeSlot,
+        address,
+        addressDetail,
+        specialRequests,
+        customizations,
+        subtractions,
+        totalPrice: initialConfig.calculatedTotal,
+        status: 'approved',
+        paymentMethod: '토스페이',
+        paymentStatus: 'paid',
+        pointsUsed: appliedPoints,
+      },
+    };
+  };
+
   return (
     <div style={{ maxWidth: '750px', margin: '0 auto' }} className="animate-fade-in-up">
       {/* Stepper Status Indicators */}
@@ -795,6 +821,8 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({ initialConfig, onReset
           amount={initialConfig.calculatedTotal - appliedPoints}
           orderName={initialConfig.selectedPackage.name}
           customerName={customerName}
+          customerMobilePhone={phone}
+          pendingOrder={getPendingTossOrder()}
           onSuccess={handlePaymentSuccess}
           onCancel={() => setShowTossModal(false)}
         />

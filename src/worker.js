@@ -31,6 +31,15 @@ const getPool = (env) => {
   return poolCache.get(connectionString);
 };
 
+const getTossConfig = (env) => ({
+  clientKey: env.TOSS_CLIENT_KEY || env.VITE_TOSS_CLIENT_KEY || '',
+  secretKey: env.TOSS_SECRET_KEY || '',
+  securityToken: env.TOSS_SECURITY_TOKEN || '',
+  webhookSecret: env.TOSS_WEBHOOK_SECRET || '',
+  merchantName: env.TOSS_MERCHANT_NAME || env.VITE_TOSS_MERCHANT_NAME || '효드림',
+  environment: env.TOSS_ENVIRONMENT || env.VITE_TOSS_ENVIRONMENT || 'test',
+});
+
 const query = (env, text, params = []) => getPool(env).query(text, params);
 
 const withTransaction = async (env, fn) => {
@@ -264,6 +273,45 @@ const handleApi = async (request, env) => {
 
   if (pathname === '/api/health') {
     return json({ ok: true, runtime: 'cloudflare-workers' });
+  }
+
+  if (pathname === '/api/payments/toss/config' && method === 'GET') {
+    const config = getTossConfig(env);
+    return json({
+      clientKey: config.clientKey,
+      merchantName: config.merchantName,
+      environment: config.environment,
+      enabled: Boolean(config.clientKey),
+      serverConfigured: Boolean(config.secretKey),
+      webhookConfigured: Boolean(config.webhookSecret || config.securityToken),
+    });
+  }
+
+  if (pathname === '/api/payments/toss/confirm' && method === 'POST') {
+    const config = getTossConfig(env);
+    if (!config.secretKey) {
+      return errorJson('TOSS_SECRET_KEY is not configured.', 500);
+    }
+
+    const { paymentKey, orderId, amount } = await readJson(request);
+    const response = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${btoa(`${config.secretKey}:`)}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ paymentKey, orderId, amount }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      return json({
+        error: result.message || 'Toss Payments confirm failed.',
+        code: result.code,
+      }, response.status);
+    }
+
+    return json(result);
   }
 
   if (pathname === '/api/admin/migrate' && method === 'POST') {
