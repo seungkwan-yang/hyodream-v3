@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
 import type { Inquiry, InquiryStatus } from '../context/AppContext';
-import { Search, Calendar, Phone, Edit3, Trash2, Clipboard, X, CheckCircle, Clock, Truck, Award, Download } from 'lucide-react';
+import { Search, Calendar, Phone, Edit3, Trash2, Clipboard, X, CheckCircle, Clock, Truck, Award, Download, ExternalLink } from 'lucide-react';
 import { OrderEditorModal } from './OrderEditorModal';
 
 // Fallback menu list (used when DB data hasn't loaded yet or backend is unavailable)
@@ -12,6 +12,8 @@ const FALLBACK_MENUS = [
   { id: 'kidae',  name: '명가 전통상 (기제사 대)',  price: 480000 },
   { id: 'gosa',   name: '개업 고사상 / 시제상',    price: 290000 },
 ];
+
+const TOSS_PAYMENT_LOGS_URL = 'https://developers.tosspayments.com/1704695/accounts/2369331/phases/test/payment-logs';
 
 export const OrderList: React.FC = () => {
   const { inquiries, deleteInquiry, addInquiry, baseMenus } = useApp();
@@ -331,6 +333,29 @@ export const OrderList: React.FC = () => {
           >
             <Download size={14} />
             CSV
+          </button>
+
+          <button
+            onClick={() => window.open(TOSS_PAYMENT_LOGS_URL, '_blank', 'noopener,noreferrer')}
+            style={{
+              padding: '6px 10px',
+              borderRadius: '8px',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              border: '1px solid #0050FF',
+              cursor: 'pointer',
+              backgroundColor: '#F2F6FF',
+              color: '#0050FF',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              transition: 'var(--transition-smooth)',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
+            }}
+          >
+            <ExternalLink size={14} />
+            토스 결제 내역
           </button>
 
           {/* Add Manual Order Button */}

@@ -66,6 +66,7 @@ const PaymentReturnHandler: React.FC = () => {
         const methodLabel = pendingOrder.paymentMethod || payment.method || '토스페이';
         addInquiry({
           ...pendingOrder.order,
+          id: orderId,
           paymentMethod: methodLabel,
           paymentStatus: payment.status === 'WAITING_FOR_DEPOSIT' ? 'pending' : 'paid',
           status: payment.status === 'WAITING_FOR_DEPOSIT' ? 'pending' : 'approved',

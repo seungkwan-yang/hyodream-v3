@@ -136,6 +136,12 @@ export const UserList: React.FC = () => {
     }
   };
 
+  const getPaymentStatusFromOrderStatus = (status: InquiryStatus): Inquiry['paymentStatus'] => {
+    if (status === 'cancelled') return 'cancelled';
+    if (status === 'pending') return 'pending';
+    return 'paid';
+  };
+
   // Get user's orders
   const getUserOrders = (username: string) => {
     return inquiries.filter(i => i.userId === username).sort((a, b) => {
@@ -434,7 +440,7 @@ export const UserList: React.FC = () => {
                                 setOrderDraft(prev => ({
                                   ...prev,
                                   status: nextStatus,
-                                  paymentStatus: nextStatus === 'cancelled' ? 'cancelled' : prev.paymentStatus
+                                  paymentStatus: getPaymentStatusFromOrderStatus(nextStatus)
                                 }));
                               }}
                             >
@@ -442,27 +448,12 @@ export const UserList: React.FC = () => {
                                 <option key={status} value={status}>{getStatusLabel(status)}</option>
                               ))}
                             </select>
-                            <select
-                              value={orderDraft.paymentStatus || 'pending'}
-                              onChange={(e) => {
-                                const nextPaymentStatus = e.target.value as Inquiry['paymentStatus'];
-                                setOrderDraft(prev => ({
-                                  ...prev,
-                                  paymentStatus: nextPaymentStatus,
-                                  status: nextPaymentStatus === 'cancelled'
-                                    ? 'cancelled'
-                                    : nextPaymentStatus === 'paid' && (!prev.status || prev.status === 'pending' || prev.status === 'cancelled')
-                                      ? 'approved'
-                                      : nextPaymentStatus === 'pending' && prev.status === 'cancelled'
-                                        ? 'pending'
-                                      : prev.status
-                                }));
-                              }}
-                            >
-                              <option value="pending">결제대기</option>
-                              <option value="paid">결제완료</option>
-                              <option value="cancelled">결제취소</option>
-                            </select>
+                            <input
+                              type="text"
+                              value={`사용 포인트: ${Number(orderDraft.pointsUsed ?? 0).toLocaleString()} P`}
+                              readOnly
+                              aria-label="사용 포인트"
+                            />
                           </div>
                           <div className="responsive-form-grid-1-1">
                             <input
@@ -531,6 +522,9 @@ export const UserList: React.FC = () => {
                             <div style={{ textAlign: 'right' }}>
                               <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-primary)' }}>
                                 {order.totalPrice.toLocaleString()}원
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: Number(order.pointsUsed || 0) > 0 ? 'var(--color-rose)' : 'var(--color-text-muted)', marginTop: '4px', fontWeight: 700 }}>
+                                사용 포인트 {Number(order.pointsUsed || 0).toLocaleString()} P
                               </div>
                               <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
                                 {order.paymentMethod || '무통장 입금'} · {order.paymentStatus === 'paid' ? '결제완료' : order.paymentStatus === 'cancelled' ? '결제취소' : '결제대기'}

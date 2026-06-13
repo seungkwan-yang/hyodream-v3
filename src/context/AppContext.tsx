@@ -82,6 +82,7 @@ export interface Inquiry {
   paymentMethod?: string; // e.g. '토스페이', '신용카드(신한)'
   paymentStatus?: 'paid' | 'pending' | 'cancelled';
   tossTransactionId?: string;
+  cancelReason?: string;
   userId?: string;
   pointsEarned?: number;
   pointsUsed?: number;
@@ -137,7 +138,7 @@ interface AppContextType {
   
   // Inquiries
   inquiries: Inquiry[];
-  addInquiry: (inquiry: Omit<Inquiry, 'id' | 'createdAt' | 'status'> & { status?: InquiryStatus, paymentMethod?: string, paymentStatus?: 'paid' | 'pending' | 'cancelled', tossTransactionId?: string }) => Inquiry;
+  addInquiry: (inquiry: Omit<Inquiry, 'id' | 'createdAt' | 'status'> & { id?: string, status?: InquiryStatus, paymentMethod?: string, paymentStatus?: 'paid' | 'pending' | 'cancelled', tossTransactionId?: string }) => Inquiry;
   updateInquiry: (id: string, updated: Partial<Inquiry>) => Promise<Inquiry | null>;
   updateInquiryStatus: (id: string, status: InquiryStatus) => Promise<Inquiry | null>;
   updateInquiryNotes: (id: string, notes: string) => Promise<Inquiry | null>;
@@ -551,10 +552,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Inquiry booking
-  const addInquiry = (inquiryData: Omit<Inquiry, 'id' | 'createdAt' | 'status'> & { status?: InquiryStatus, paymentMethod?: string, paymentStatus?: 'paid' | 'pending' | 'cancelled', tossTransactionId?: string, pointsUsed?: number }) => {
+  const addInquiry = (inquiryData: Omit<Inquiry, 'id' | 'createdAt' | 'status'> & { id?: string, status?: InquiryStatus, paymentMethod?: string, paymentStatus?: 'paid' | 'pending' | 'cancelled', tossTransactionId?: string, pointsUsed?: number }) => {
     const year = new Date().getFullYear();
     const sequence = String(inquiries.length + 1).padStart(4, '0');
-    const newId = `HD-${year}-${sequence}`;
+    const newId = inquiryData.id || `HD-${year}-${sequence}`;
     const now = new Date();
     const createdAt = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     

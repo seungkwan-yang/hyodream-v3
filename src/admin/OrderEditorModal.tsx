@@ -31,31 +31,19 @@ const getStatusIcon = (status: InquiryStatus) => {
   }
 };
 
-const getPaymentStatusLabel = (status: Inquiry['paymentStatus']) => {
-  switch (status) {
-    case 'paid': return '결제완료';
-    case 'cancelled': return '결제취소';
-    default: return '결제대기';
-  }
-};
-
-const syncStatusFromPayment = (paymentStatus: Inquiry['paymentStatus'], status?: InquiryStatus): InquiryStatus | undefined => {
-  if (paymentStatus === 'cancelled') return 'cancelled';
-  if (paymentStatus === 'paid' && (!status || status === 'pending' || status === 'cancelled')) return 'approved';
-  if (paymentStatus === 'pending') return 'pending';
-  return status;
-};
-
-const syncPaymentFromStatus = (status: InquiryStatus, paymentStatus?: Inquiry['paymentStatus']): Inquiry['paymentStatus'] => {
+const syncPaymentFromStatus = (status: InquiryStatus): Inquiry['paymentStatus'] => {
   if (status === 'cancelled') return 'cancelled';
   if (status === 'pending') return 'pending';
-  return paymentStatus === 'cancelled' || !paymentStatus ? 'paid' : paymentStatus;
+  return 'paid';
 };
 
 export const OrderEditorModal: React.FC<OrderEditorModalProps> = ({ order, onClose }) => {
   const { updateInquiry, deleteInquiry } = useApp();
   const [draft, setDraft] = useState<Partial<Inquiry>>({ ...order });
   const [isSaving, setIsSaving] = useState(false);
+  const currentStatus = (draft.status || order.status) as InquiryStatus;
+  const usedPoints = Number(draft.pointsUsed ?? order.pointsUsed ?? 0);
+  const earnedPoints = Number(draft.pointsEarned ?? Math.floor(Number(draft.totalPrice ?? order.totalPrice ?? 0) * 0.01));
 
   useEffect(() => {
     setDraft({ ...order });
@@ -67,11 +55,17 @@ export const OrderEditorModal: React.FC<OrderEditorModalProps> = ({ order, onClo
     if (!draft.phone?.trim()) return alert('연락처를 입력해 주세요.');
     if (!draft.ritualType?.trim()) return alert('주문상품을 입력해 주세요.');
     if (Number.isNaN(totalPrice) || totalPrice < 0) return alert('결제금액을 올바르게 입력해 주세요.');
+    const isNewCancel = order.status !== 'cancelled' && draft.status === 'cancelled';
+    const hasTossPayment = order.paymentStatus === 'paid' && Boolean(order.tossTransactionId);
+    if (isNewCancel && hasTossPayment && !window.confirm('주문을 취소하면 Toss Payments 결제도 실제로 취소됩니다. 계속할까요?')) {
+      return;
+    }
 
     setIsSaving(true);
     const saved = await updateInquiry(order.id, {
       ...draft,
       totalPrice,
+      cancelReason: isNewCancel ? '관리자 주문 취소' : undefined,
       pointsEarned: Math.floor(totalPrice * 0.01)
     });
     setIsSaving(false);
@@ -118,11 +112,10 @@ export const OrderEditorModal: React.FC<OrderEditorModalProps> = ({ order, onClo
             </h2>
             <div style={{ display: 'flex', gap: '12px', marginTop: '10px', color: 'var(--color-text-sub)', fontSize: '0.8rem', flexWrap: 'wrap' }}>
               <span>주문번호: {order.id}</span>
-              <span className={`badge badge-${draft.status || order.status}`} style={{ gap: '4px', padding: '4px 8px', fontSize: '0.72rem' }}>
-                {getStatusIcon((draft.status || order.status) as InquiryStatus)}
-                {getStatusLabel((draft.status || order.status) as InquiryStatus)}
+              <span className={`badge badge-${currentStatus}`} style={{ gap: '4px', padding: '4px 8px', fontSize: '0.72rem' }}>
+                {getStatusIcon(currentStatus)}
+                {getStatusLabel(currentStatus)}
               </span>
-              <span>{getPaymentStatusLabel(draft.paymentStatus || order.paymentStatus)}</span>
             </div>
           </div>
           <button
@@ -149,7 +142,8 @@ export const OrderEditorModal: React.FC<OrderEditorModalProps> = ({ order, onClo
               <input type="date" value={draft.date || ''} onChange={(e) => setDraft(prev => ({ ...prev, date: e.target.value }))} />
               <input type="text" value={draft.timeSlot || ''} onChange={(e) => setDraft(prev => ({ ...prev, timeSlot: e.target.value }))} placeholder="배송 시간" />
             </div>
-            <div className="responsive-form-grid-1-1">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--color-text-sub)' }}>주문 상태</label>
               <select
                 value={draft.status || 'pending'}
                 onChange={(e) => {
@@ -157,28 +151,13 @@ export const OrderEditorModal: React.FC<OrderEditorModalProps> = ({ order, onClo
                   setDraft(prev => ({
                     ...prev,
                     status: nextStatus,
-                    paymentStatus: syncPaymentFromStatus(nextStatus, prev.paymentStatus)
+                    paymentStatus: syncPaymentFromStatus(nextStatus)
                   }));
                 }}
               >
                 {statusOptions.map(status => (
                   <option key={status} value={status}>{getStatusLabel(status)}</option>
                 ))}
-              </select>
-              <select
-                value={draft.paymentStatus || 'pending'}
-                onChange={(e) => {
-                  const nextPaymentStatus = e.target.value as Inquiry['paymentStatus'];
-                  setDraft(prev => ({
-                    ...prev,
-                    paymentStatus: nextPaymentStatus,
-                    status: syncStatusFromPayment(nextPaymentStatus, prev.status)
-                  }));
-                }}
-              >
-                <option value="pending">결제대기</option>
-                <option value="paid">결제완료</option>
-                <option value="cancelled">결제취소</option>
               </select>
             </div>
             <div className="responsive-form-grid-1-1">
@@ -191,6 +170,22 @@ export const OrderEditorModal: React.FC<OrderEditorModalProps> = ({ order, onClo
             <textarea value={draft.adminNotes || ''} onChange={(e) => setDraft(prev => ({ ...prev, adminNotes: e.target.value }))} rows={3} placeholder="관리자 메모" style={{ resize: 'vertical', lineHeight: 1.6 }} />
 
             <div style={{ padding: '14px 16px', borderRadius: '12px', border: '1px dashed var(--border-color)', backgroundColor: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px', marginBottom: '4px' }}>
+                <div>
+                  <div style={{ color: 'var(--color-text-sub)', fontSize: '0.78rem', fontWeight: 800, marginBottom: '3px' }}>결제금액</div>
+                  <div style={{ color: 'var(--color-text-main)', fontSize: '0.95rem', fontWeight: 800 }}>{Number(draft.totalPrice ?? order.totalPrice ?? 0).toLocaleString()}원</div>
+                </div>
+                <div>
+                  <div style={{ color: 'var(--color-text-sub)', fontSize: '0.78rem', fontWeight: 800, marginBottom: '3px' }}>사용 포인트</div>
+                  <div style={{ color: usedPoints > 0 ? 'var(--color-rose)' : 'var(--color-text-main)', fontSize: '0.95rem', fontWeight: 800 }}>
+                    {usedPoints > 0 ? '-' : ''}{usedPoints.toLocaleString()} P
+                  </div>
+                </div>
+                <div>
+                  <div style={{ color: 'var(--color-text-sub)', fontSize: '0.78rem', fontWeight: 800, marginBottom: '3px' }}>적립 예정 포인트</div>
+                  <div style={{ color: 'var(--color-primary)', fontSize: '0.95rem', fontWeight: 800 }}>+{earnedPoints.toLocaleString()} P</div>
+                </div>
+              </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-sub)', fontSize: '0.82rem', fontWeight: 700 }}>
                 <MapPin size={14} /> 배송지
               </div>

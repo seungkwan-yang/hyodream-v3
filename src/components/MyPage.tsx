@@ -462,6 +462,7 @@ export const MyPage: React.FC = () => {
                   <th style={{ padding: '16px', fontWeight: 600 }}>주문일시</th>
                   <th style={{ padding: '16px', fontWeight: 600 }}>주문상품</th>
                   <th style={{ padding: '16px', fontWeight: 600 }}>결제금액</th>
+                  <th style={{ padding: '16px', fontWeight: 600 }}>사용포인트</th>
                   <th style={{ padding: '16px', fontWeight: 600 }}>적립포인트</th>
                   <th style={{ padding: '16px', fontWeight: 600 }}>상태</th>
                 </tr>
@@ -472,6 +473,9 @@ export const MyPage: React.FC = () => {
                     <td style={{ padding: '16px', color: '#666', fontSize: '0.9rem' }}>{order.createdAt}</td>
                     <td style={{ padding: '16px', fontWeight: 600 }}>{order.ritualType}</td>
                     <td style={{ padding: '16px' }}>{order.totalPrice.toLocaleString()}원</td>
+                    <td style={{ padding: '16px', color: Number(order.pointsUsed || 0) > 0 ? 'var(--color-rose)' : 'var(--color-text-muted)', fontWeight: 600 }}>
+                      {Number(order.pointsUsed || 0) > 0 ? `-${Number(order.pointsUsed).toLocaleString()} P` : '0 P'}
+                    </td>
                     <td style={{ padding: '16px', color: 'var(--color-primary)', fontWeight: 600 }}>+{order.pointsEarned?.toLocaleString() || 0} P</td>
                     <td style={{ padding: '16px' }}>
                       <span style={{

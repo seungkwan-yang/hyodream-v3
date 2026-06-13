@@ -69,6 +69,19 @@ const cleanEnvValue = (value) => {
   return value.trim().replace(/^['"]|['"]$/g, '');
 };
 
+const arrayBufferToBase64 = (arrayBuffer) => {
+  const bytes = new Uint8Array(arrayBuffer);
+  const chunkSize = 0x8000;
+  let binary = '';
+
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    const chunk = bytes.subarray(index, index + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+
+  return btoa(binary);
+};
+
 const keyFingerprint = (value) => {
   const key = cleanEnvValue(value);
   if (!key) return null;
@@ -87,6 +100,40 @@ const getTossConfig = (env) => ({
   merchantName: cleanEnvValue(env.TOSS_MERCHANT_NAME || '효드림'),
   environment: cleanEnvValue(env.TOSS_ENVIRONMENT || 'test'),
 });
+
+const cancelTossPayment = async (env, paymentKey, cancelReason = '관리자 주문 취소') => {
+  const config = getTossConfig(env);
+  const cleanPaymentKey = cleanEnvValue(paymentKey);
+  if (!cleanPaymentKey) return null;
+  if (!config.secretKey) {
+    const err = new Error('TOSS_SECRET_KEY is not configured.');
+    err.status = 500;
+    throw err;
+  }
+
+  const response = await fetch(`https://api.tosspayments.com/v1/payments/${encodeURIComponent(cleanPaymentKey)}/cancel`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${btoa(`${config.secretKey}:`)}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ cancelReason }),
+  });
+
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const code = result.code || '';
+    if (code === 'ALREADY_CANCELED_PAYMENT' || code === 'ALREADY_CANCELLED_PAYMENT') {
+      return result;
+    }
+    const err = new Error(result.message || 'Toss Payments cancel failed.');
+    err.status = response.status;
+    err.code = code;
+    throw err;
+  }
+
+  return result;
+};
 
 const query = async (env, text, params = []) => {
   if (!env.HYPERDRIVE?.connectionString) {
@@ -346,10 +393,6 @@ const inquirySelect = `
 `;
 
 const handleUpload = async (request, env) => {
-  if (!env.UPLOADS_BUCKET) {
-    return errorJson('UPLOADS_BUCKET R2 binding is required for uploads on Cloudflare.', 501);
-  }
-
   const formData = await request.formData();
   const file = formData.get('image');
   if (!file || typeof file === 'string') {
@@ -367,11 +410,22 @@ const handleUpload = async (request, env) => {
 
   const extension = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : 'bin';
   const filename = `dish-${Date.now()}-${crypto.randomUUID()}.${extension}`;
+
+  if (!env.UPLOADS_BUCKET) {
+    const arrayBuffer = await file.arrayBuffer();
+    const base64 = arrayBufferToBase64(arrayBuffer);
+    return json({
+      url: `data:${file.type};base64,${base64}`,
+      filename,
+      storage: 'inline',
+    });
+  }
+
   await env.UPLOADS_BUCKET.put(filename, file.stream(), {
     httpMetadata: { contentType: file.type },
   });
 
-  return json({ url: `/uploads/${filename}`, filename });
+  return json({ url: `/uploads/${filename}`, filename, storage: 'r2' });
 };
 
 const handleApi = async (request, env) => {
@@ -767,6 +821,9 @@ const handleApi = async (request, env) => {
       if (requestedPaymentStatus === 'pending') nextStatus = 'pending';
       if (requestedPaymentStatus === 'cancelled') nextStatus = 'cancelled';
       if (newPaymentStatus !== 'cancelled' && inquiry.payment_status !== 'paid' && (nextStatus === 'approved' || nextStatus === 'completed')) newPaymentStatus = 'paid';
+      if (inquiry.payment_status === 'paid' && newPaymentStatus === 'cancelled' && inquiry.toss_transaction_id) {
+        await cancelTossPayment(env, inquiry.toss_transaction_id, body.cancelReason || '관리자 주문 취소');
+      }
 
       if (inquiry.payment_status !== 'paid' && newPaymentStatus === 'paid' && nextUserId) {
         await client.query('UPDATE hd_users SET points = points + $1 WHERE username = $2', [nextPointsEarned, nextUserId]);

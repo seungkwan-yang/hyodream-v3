@@ -80,6 +80,40 @@ const tossConfig = {
   environment: process.env.TOSS_ENVIRONMENT || 'test',
 };
 
+const cancelTossPayment = async (paymentKey, cancelReason = '관리자 주문 취소') => {
+  const cleanPaymentKey = String(paymentKey || '').trim().replace(/^['"]|['"]$/g, '');
+  if (!cleanPaymentKey) return null;
+  if (!tossConfig.secretKey) {
+    const err = new Error('TOSS_SECRET_KEY is not configured.');
+    err.status = 500;
+    throw err;
+  }
+
+  const encodedSecretKey = Buffer.from(`${tossConfig.secretKey}:`).toString('base64');
+  const response = await fetch(`https://api.tosspayments.com/v1/payments/${encodeURIComponent(cleanPaymentKey)}/cancel`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${encodedSecretKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ cancelReason }),
+  });
+
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const code = result.code || '';
+    if (code === 'ALREADY_CANCELED_PAYMENT' || code === 'ALREADY_CANCELLED_PAYMENT') {
+      return result;
+    }
+    const err = new Error(result.message || 'Toss Payments cancel failed.');
+    err.status = response.status;
+    err.code = code;
+    throw err;
+  }
+
+  return result;
+};
+
 // Prevent application crash on unhandled database errors
 pool.on('error', (err) => {
   console.error('[HyoDream DB Pool] Unexpected database connection error:', err);
@@ -871,6 +905,9 @@ app.put('/api/inquiries/:id', async (req, res) => {
 
     if (newPaymentStatus !== 'cancelled' && inquiry.payment_status !== 'paid' && (nextStatus === 'approved' || nextStatus === 'completed')) {
       newPaymentStatus = 'paid';
+    }
+    if (inquiry.payment_status === 'paid' && newPaymentStatus === 'cancelled' && inquiry.toss_transaction_id) {
+      await cancelTossPayment(inquiry.toss_transaction_id, req.body.cancelReason || '관리자 주문 취소');
     }
 
     // Award points exactly when an unpaid/cancelled order becomes paid.
