@@ -3,6 +3,9 @@ main = "src/worker.js"
 compatibility_date = "2026-06-13"
 compatibility_flags = ["nodejs_compat"]
 
+[observability]
+enabled = true
+
 [assets]
 directory = "./dist"
 binding = "ASSETS"
@@ -13,6 +16,16 @@ not_found_handling = "single-page-application"
 #
 # Optional schema migration endpoint guard:
 # npx wrangler secret put MIGRATION_TOKEN
+#
+# Optional Cloudflare Hyperdrive binding.
+# 1. Create a Hyperdrive config in the Cloudflare Dashboard.
+# 2. Replace <YOUR_HYPERDRIVE_CONFIG_ID> with its config ID.
+# 3. Uncomment this block.
+#
+# [[hyperdrive]]
+# binding = "HYPERDRIVE"
+# id = "<YOUR_HYPERDRIVE_CONFIG_ID>"
+# localConnectionString = "postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require"
 #
 # Toss Payments secrets for Cloudflare:
 # npx wrangler secret put TOSS_CLIENT_KEY

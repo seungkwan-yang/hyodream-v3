@@ -72,12 +72,12 @@ const pool = new Pool({
 });
 
 const tossConfig = {
-  clientKey: process.env.TOSS_CLIENT_KEY || process.env.VITE_TOSS_CLIENT_KEY || '',
+  clientKey: process.env.TOSS_CLIENT_KEY || '',
   secretKey: process.env.TOSS_SECRET_KEY || '',
   securityToken: process.env.TOSS_SECURITY_TOKEN || '',
   webhookSecret: process.env.TOSS_WEBHOOK_SECRET || '',
-  merchantName: process.env.TOSS_MERCHANT_NAME || process.env.VITE_TOSS_MERCHANT_NAME || '효드림',
-  environment: process.env.TOSS_ENVIRONMENT || process.env.VITE_TOSS_ENVIRONMENT || 'test',
+  merchantName: process.env.TOSS_MERCHANT_NAME || '효드림',
+  environment: process.env.TOSS_ENVIRONMENT || 'test',
 };
 
 // Prevent application crash on unhandled database errors

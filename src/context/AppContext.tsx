@@ -151,6 +151,19 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 // API Base URL helper (Support both local development and cloud deploy environments)
 const API_BASE = ''; // server.js is serving static files, meaning relative URL is optimal
 
+const readApiJson = async <T,>(response: Response): Promise<T> => {
+  const contentType = response.headers.get('content-type') || '';
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`API request failed (${response.status}): ${body.slice(0, 120)}`);
+  }
+  if (!contentType.includes('application/json')) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`API returned non-JSON response. Check Cloudflare Worker routing for ${response.url}. Body starts with: ${body.slice(0, 40)}`);
+  }
+  return response.json();
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const saved = localStorage.getItem('hd_viewMode');
@@ -189,24 +202,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Load all states from Neon DB API on mount
   useEffect(() => {
     const loadDatabaseData = async () => {
+      const loadResource = async <T,>(
+        label: string,
+        url: string,
+        setter: React.Dispatch<React.SetStateAction<T[]>>
+      ) => {
+        try {
+          const response = await fetch(url);
+          setter(await readApiJson<T[]>(response));
+        } catch (err) {
+          console.error(`[HyoDream API Fetch] Failed to load ${label}:`, err);
+        }
+      };
+
       try {
         setIsLoading(true);
-        
-        const [catRes, menuRes, itemRes, optRes, inqRes, userRes] = await Promise.all([
-          fetch(`${API_BASE}/api/categories`),
-          fetch(`${API_BASE}/api/base-menus`),
-          fetch(`${API_BASE}/api/catalog-items`),
-          fetch(`${API_BASE}/api/custom-options`),
-          fetch(`${API_BASE}/api/inquiries`),
-          fetch(`${API_BASE}/api/users`)
-        ]);
 
-        if (catRes.ok) setMenuCategories(await catRes.json());
-        if (menuRes.ok) setBaseMenus(await menuRes.json());
-        if (itemRes.ok) setCatalogItems(await itemRes.json());
-        if (optRes.ok) setCustomOptions(await optRes.json());
-        if (inqRes.ok) setInquiries(await inqRes.json());
-        if (userRes.ok) setUsers(await userRes.json());
+        await Promise.all([
+          loadResource<MenuCategory>('categories', `${API_BASE}/api/categories`, setMenuCategories),
+          loadResource<BaseMenu>('base menus', `${API_BASE}/api/base-menus`, setBaseMenus),
+          loadResource<CatalogItem>('catalog items', `${API_BASE}/api/catalog-items`, setCatalogItems),
+          loadResource<CustomOption>('custom options', `${API_BASE}/api/custom-options`, setCustomOptions),
+          loadResource<Inquiry>('inquiries', `${API_BASE}/api/inquiries`, setInquiries),
+          loadResource<User>('users', `${API_BASE}/api/users`, setUsers)
+        ]);
       } catch (err) {
         console.error('[HyoDream API Fetch] Failed to load data from Neon DB backend:', err);
       } finally {
@@ -222,7 +241,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!res.ok) {
       throw new Error('주문 목록 새로고침 실패');
     }
-    const latest = await res.json();
+    const latest = await readApiJson<Inquiry[]>(res);
     setInquiries(latest);
     return latest as Inquiry[];
   };
@@ -232,7 +251,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!res.ok) {
       throw new Error('회원 목록 새로고침 실패');
     }
-    const latest = await res.json();
+    const latest = await readApiJson<User[]>(res);
     setUsers(latest);
     setCurrentUser(prev => prev ? latest.find((user: User) => user.username === prev.username) || prev : prev);
     return latest as User[];

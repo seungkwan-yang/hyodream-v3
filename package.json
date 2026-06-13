@@ -9,6 +9,7 @@
     "build": "tsc -b && vite build",
     "cf:dev": "npm run build && npx wrangler dev",
     "cf:deploy": "npm run build && npx wrangler deploy",
+    "cf:pages:deploy": "npm run build && npx wrangler pages deploy dist --project-name hyodream-v3",
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "node server.js"

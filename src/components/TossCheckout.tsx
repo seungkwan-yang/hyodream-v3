@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, ShieldCheck, Check, Smartphone, Landmark, AlertCircle, Loader2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { tossClientConfig, isTossClientConfigured } from '../config/toss';
-import { TOSS_PENDING_ORDER_KEY } from '../config/toss';
+import { DEFAULT_TOSS_MERCHANT_NAME, getTossRuntimeConfig, TOSS_PENDING_ORDER_KEY } from '../config/toss';
+import type { TossRuntimeConfig } from '../config/toss';
 
 declare global {
   interface Window {
@@ -41,6 +41,8 @@ export const TossCheckout: React.FC<TossCheckoutProps> = ({
   const [method, setMethod] = useState<'tosspay' | 'card' | 'transfer' | 'virtual'>('tosspay');
   const [selectedCard, setSelectedCard] = useState<string>('shinhan');
   const [step, setStep] = useState<'select' | 'processing' | 'card_password' | 'biometric' | 'success'>('select');
+  const [runtimeConfig, setRuntimeConfig] = useState<TossRuntimeConfig | null>(null);
+  const [runtimeConfigError, setRuntimeConfigError] = useState('');
   
   // Loading timers
   const [progress, setProgress] = useState(0);
@@ -94,9 +96,51 @@ export const TossCheckout: React.FC<TossCheckoutProps> = ({
 
   const normalizePhone = (value?: string) => (value || '').replace(/[^0-9]/g, '');
 
+  useEffect(() => {
+    let ignore = false;
+
+    getTossRuntimeConfig()
+      .then((config) => {
+        if (ignore) return;
+        setRuntimeConfig(config);
+        setRuntimeConfigError('');
+      })
+      .catch((err) => {
+        if (ignore) return;
+        setRuntimeConfigError(err instanceof Error ? err.message : '알 수 없는 설정 로딩 오류');
+        console.error('[HyoDream Toss] config preload failed:', err);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
   const requestRealTossPayment = async () => {
-    if (!isTossClientConfigured) {
-      alert('Toss Payments 클라이언트 키가 설정되지 않았습니다.');
+    let paymentConfig = runtimeConfig;
+    let paymentConfigError = runtimeConfigError;
+    try {
+      if (!paymentConfig) {
+        paymentConfig = await getTossRuntimeConfig();
+        setRuntimeConfig(paymentConfig);
+        setRuntimeConfigError('');
+        paymentConfigError = '';
+      }
+    } catch (err) {
+      paymentConfigError = err instanceof Error ? err.message : '알 수 없는 설정 로딩 오류';
+      setRuntimeConfigError(paymentConfigError);
+      console.error('[HyoDream Toss] config load failed:', err);
+    }
+
+    const clientKey = paymentConfig?.clientKey || '';
+    const customerKey = `HD_CUSTOMER_${Date.now()}`;
+
+    if (!clientKey) {
+      alert(
+        paymentConfigError
+          ? `Toss Payments 클라이언트 키를 불러오지 못했습니다.\n${paymentConfigError}`
+          : 'Toss Payments 클라이언트 키가 설정되지 않았습니다.'
+      );
       return;
     }
 
@@ -117,13 +161,13 @@ export const TossCheckout: React.FC<TossCheckoutProps> = ({
     }));
 
     await loadTossPaymentsSdk();
-    const tossPayments = window.TossPayments?.(tossClientConfig.clientKey);
+    const tossPayments = window.TossPayments?.(clientKey);
     if (!tossPayments) {
       throw new Error('Toss Payments SDK 초기화 실패');
     }
 
     const payment = tossPayments.payment({
-      customerKey: tossClientConfig.customerKey || `HD_CUSTOMER_${Date.now()}`,
+      customerKey,
     });
 
     await payment.requestPayment({
@@ -270,7 +314,9 @@ export const TossCheckout: React.FC<TossCheckoutProps> = ({
               padding: '16px 20px',
               marginBottom: '24px'
             }}>
-              <span style={{ fontSize: '0.75rem', color: '#6B7684', display: 'block', marginBottom: '4px' }}>가맹점명: {tossClientConfig.merchantName}</span>
+              <span style={{ fontSize: '0.75rem', color: '#6B7684', display: 'block', marginBottom: '4px' }}>
+                가맹점명: {runtimeConfig?.merchantName || DEFAULT_TOSS_MERCHANT_NAME}
+              </span>
               <strong style={{ fontSize: '0.95rem', color: '#191F28', display: 'block' }}>{orderName}</strong>
               <div style={{
                 borderTop: '1px solid #E5E8EB',

@@ -23,6 +23,15 @@ export const Estimator: React.FC<EstimatorProps> = ({ onProceedToForm }) => {
     return visibleCategories[0]?.id || '';
   });
 
+  useEffect(() => {
+    if (!activeCatId && visibleCategories.length > 0) {
+      setActiveCatId(visibleCategories[0].id);
+    }
+    if (activeCatId && visibleCategories.length > 0 && !visibleCategories.some(cat => cat.id === activeCatId)) {
+      setActiveCatId(visibleCategories[0].id);
+    }
+  }, [activeCatId, visibleCategories]);
+
   const visibleBaseMenus = baseMenus.filter(m => m.visible && m.categoryId === activeCatId);
 
   // Track the selected package ID
@@ -52,6 +61,7 @@ export const Estimator: React.FC<EstimatorProps> = ({ onProceedToForm }) => {
 
   // Compute total price
   const calculateTotal = () => {
+    if (!selectedPackage) return 0;
     let total = selectedPackage.price;
     customOptions.forEach(opt => {
       if (checkedOptionIds[opt.id]) {
@@ -106,6 +116,7 @@ export const Estimator: React.FC<EstimatorProps> = ({ onProceedToForm }) => {
   };
 
   const handleProceed = () => {
+    if (!selectedPackage) return;
     onProceedToForm({
       selectedPackage,
       selectedAdditions: getSelectedAdditions(),
@@ -115,6 +126,16 @@ export const Estimator: React.FC<EstimatorProps> = ({ onProceedToForm }) => {
   };
 
   return (
+    !selectedPackage ? (
+      <div className="premium-card animate-fade-in-up" style={{ padding: '32px', textAlign: 'center' }}>
+        <h3 className="serif-font" style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '10px' }}>
+          메뉴 데이터를 불러오지 못했습니다
+        </h3>
+        <p style={{ color: 'var(--color-text-sub)', lineHeight: 1.6 }}>
+          Cloudflare에서 /api 요청이 Worker로 연결되어 있는지 확인해 주세요.
+        </p>
+      </div>
+    ) : (
     <div style={{
       display: 'grid',
       gridTemplateColumns: '1.8fr 1.2fr',
@@ -591,5 +612,6 @@ export const Estimator: React.FC<EstimatorProps> = ({ onProceedToForm }) => {
       </div>
 
     </div>
+    )
   );
 };

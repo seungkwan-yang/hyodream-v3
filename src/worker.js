@@ -1,4 +1,4 @@
-import { Pool } from '@neondatabase/serverless';
+import { Pool, neon } from '@neondatabase/serverless';
 import bcrypt from 'bcryptjs';
 
 const json = (data, status = 200, headers = {}) =>
@@ -17,6 +17,35 @@ const errorJson = (error, status = 500) =>
 const getConnectionString = (env) =>
   env.HYPERDRIVE?.connectionString || env.DATABASE_URL;
 
+const getSafeDbInfo = (env) => {
+  const connectionString = getConnectionString(env);
+  if (!connectionString) {
+    return {
+      configured: false,
+      source: env.HYPERDRIVE?.connectionString ? 'HYPERDRIVE' : 'DATABASE_URL',
+    };
+  }
+
+  try {
+    const url = new URL(connectionString);
+    return {
+      configured: true,
+      source: env.HYPERDRIVE?.connectionString ? 'HYPERDRIVE' : 'DATABASE_URL',
+      host: url.hostname,
+      database: url.pathname.replace(/^\//, ''),
+      username: decodeURIComponent(url.username || ''),
+      sslmode: url.searchParams.get('sslmode'),
+      channelBinding: url.searchParams.get('channel_binding'),
+    };
+  } catch {
+    return {
+      configured: true,
+      source: env.HYPERDRIVE?.connectionString ? 'HYPERDRIVE' : 'DATABASE_URL',
+      parseable: false,
+    };
+  }
+};
+
 const createPool = (env) => {
   const connectionString = getConnectionString(env);
   if (!connectionString) {
@@ -26,16 +55,44 @@ const createPool = (env) => {
   return new Pool({ connectionString });
 };
 
+const createSql = (env) => {
+  const connectionString = getConnectionString(env);
+  if (!connectionString) {
+    throw new Error('DATABASE_URL or HYPERDRIVE binding is required.');
+  }
+
+  return neon(connectionString, { fullResults: true });
+};
+
+const cleanEnvValue = (value) => {
+  if (typeof value !== 'string') return '';
+  return value.trim().replace(/^['"]|['"]$/g, '');
+};
+
+const keyFingerprint = (value) => {
+  const key = cleanEnvValue(value);
+  if (!key) return null;
+  return {
+    length: key.length,
+    prefix: key.slice(0, 8),
+    suffix: key.slice(-6),
+  };
+};
+
 const getTossConfig = (env) => ({
-  clientKey: env.TOSS_CLIENT_KEY || env.VITE_TOSS_CLIENT_KEY || '',
-  secretKey: env.TOSS_SECRET_KEY || '',
-  securityToken: env.TOSS_SECURITY_TOKEN || '',
-  webhookSecret: env.TOSS_WEBHOOK_SECRET || '',
-  merchantName: env.TOSS_MERCHANT_NAME || env.VITE_TOSS_MERCHANT_NAME || '효드림',
-  environment: env.TOSS_ENVIRONMENT || env.VITE_TOSS_ENVIRONMENT || 'test',
+  clientKey: cleanEnvValue(env.TOSS_CLIENT_KEY || ''),
+  secretKey: cleanEnvValue(env.TOSS_SECRET_KEY || ''),
+  securityToken: cleanEnvValue(env.TOSS_SECURITY_TOKEN || ''),
+  webhookSecret: cleanEnvValue(env.TOSS_WEBHOOK_SECRET || ''),
+  merchantName: cleanEnvValue(env.TOSS_MERCHANT_NAME || '효드림'),
+  environment: cleanEnvValue(env.TOSS_ENVIRONMENT || 'test'),
 });
 
 const query = async (env, text, params = []) => {
+  if (!env.HYPERDRIVE?.connectionString) {
+    return createSql(env).query(text, params);
+  }
+
   const pool = createPool(env);
   try {
     return await pool.query(text, params);
@@ -199,6 +256,63 @@ const ensureSchema = async (env) => {
   await query(env, 'ALTER TABLE hd_reviews ADD COLUMN IF NOT EXISTS user_id VARCHAR(50);');
 };
 
+const ensureDefaultData = async (env) => {
+  await ensureSchema(env);
+
+  if (env.ENABLE_DEFAULT_SEED !== 'true') {
+    return;
+  }
+
+  const categoryCount = await query(env, 'SELECT COUNT(*)::int AS count FROM hd_categories');
+  if (Number(categoryCount.rows[0]?.count || 0) === 0) {
+    await query(env, `
+      INSERT INTO hd_categories (id, name, visible) VALUES
+      ('cat-ritual', '차례 / 기제사상', true),
+      ('cat-gosa', '고사 / 시제상', true)
+      ON CONFLICT (id) DO NOTHING
+    `);
+  }
+
+  const itemCount = await query(env, 'SELECT COUNT(*)::int AS count FROM hd_catalog_items');
+  if (Number(itemCount.rows[0]?.count || 0) === 0) {
+    await query(env, `
+      INSERT INTO hd_catalog_items (id, name, description, category, ingredients, points, visible, image_url) VALUES
+      ('item-jeon-01', '수제 명품 동태전', '신선한 동태포를 노릇하게 부친 대표 전 품목입니다.', 'jeon', '동태, 계란, 밀가루', ARRAY['당일 제조', '부드러운 식감'], true, 'https://images.unsplash.com/photo-1626200419199-391ae4be7a40?auto=format&fit=crop&w=600&q=80'),
+      ('item-jeon-02', '정성 가득 고기완자전', '국산 돈육과 두부, 야채를 넣어 도톰하게 빚은 완자전입니다.', 'jeon', '돼지고기, 두부, 부추, 양파', ARRAY['수제 완자', '풍부한 육즙'], true, 'https://images.unsplash.com/photo-1608897013039-887f21d8c804?auto=format&fit=crop&w=600&q=80'),
+      ('item-namul-01', '정갈한 삼색 나물', '고사리, 도라지, 시금치를 정갈하게 준비한 기본 나물 구성입니다.', 'namul', '고사리, 도라지, 시금치', ARRAY['삼색 구성', '전통 조리'], true, 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=600&q=80'),
+      ('item-tang-01', '깊고 맑은 탕국', '무와 소고기, 두부를 넣어 맑고 깊게 끓인 탕국입니다.', 'tang', '소고기, 무, 두부', ARRAY['맑은 국물', '제수 기본'], true, 'https://images.unsplash.com/photo-1607532941433-304659e8198a?auto=format&fit=crop&w=600&q=80'),
+      ('item-jeok-01', '명품 육적', '양념에 재운 고기를 정성껏 구워 올리는 산적 품목입니다.', 'jeok', '소고기, 양념', ARRAY['직화 풍미', '프리미엄 구성'], true, 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80'),
+      ('item-fruit-01', '특상품 제수용 과일', '상처 없고 신선한 제수용 과일을 엄선해 구성합니다.', 'fruit', '사과, 배, 곶감', ARRAY['특등급 선별', '완충 포장'], true, 'https://images.unsplash.com/photo-1619546813926-a78fa6372cd2?auto=format&fit=crop&w=600&q=80')
+      ON CONFLICT (id) DO NOTHING
+    `);
+  }
+
+  const menuCount = await query(env, 'SELECT COUNT(*)::int AS count FROM hd_base_menus');
+  if (Number(menuCount.rows[0]?.count || 0) === 0) {
+    await query(env, `
+      INSERT INTO hd_base_menus (id, category_id, name, description, price, tags, item_ids, visible) VALUES
+      ('kisso', 'cat-ritual', '소가족 실속상 (기제사 소)', '1~2인 가구와 핵가족을 위한 실속형 상차림입니다.', 220000, ARRAY['실속형', '1~2인', '기제사'], ARRAY['item-jeon-01', 'item-jeon-02', 'item-namul-01', 'item-tang-01'], true),
+      ('kijung', 'cat-ritual', '표준 맞춤상 (기제사 중)', '가장 많이 찾으시는 3~4인용 표준 상차림입니다.', 350000, ARRAY['인기', '3~4인', '기제사'], ARRAY['item-jeon-01', 'item-jeon-02', 'item-namul-01', 'item-tang-01', 'item-jeok-01', 'item-fruit-01'], true),
+      ('kidae', 'cat-ritual', '명가 전통상 (기제사 대)', '대가족을 위한 풍성한 프리미엄 상차림입니다.', 480000, ARRAY['프리미엄', '5인이상', '기제사'], ARRAY['item-jeon-01', 'item-jeon-02', 'item-namul-01', 'item-tang-01', 'item-jeok-01', 'item-fruit-01'], true),
+      ('gosa', 'cat-gosa', '개업 고사상 / 시제상', '사업 번창과 평안을 기원하는 맞춤형 고사상입니다.', 290000, ARRAY['고사/시제', '맞춤형'], ARRAY['item-fruit-01'], true)
+      ON CONFLICT (id) DO NOTHING
+    `);
+  }
+
+  const optionCount = await query(env, 'SELECT COUNT(*)::int AS count FROM hd_custom_options');
+  if (Number(optionCount.rows[0]?.count || 0) === 0) {
+    await query(env, `
+      INSERT INTO hd_custom_options (id, name, price, type, description, image_url) VALUES
+      ('abalone', '완도산 명품 활전복 숙회 (5미)', 35000, 'addition', '고급 제수 품목으로 전복 숙회를 추가합니다.', 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=600&q=80'),
+      ('beef', '한우 갈비찜 업그레이드', 40000, 'addition', '육류 구성을 한우 갈비찜으로 업그레이드합니다.', 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80'),
+      ('sikhye', '수제 전통 식혜 (1.8L)', 10000, 'addition', '전통 방식으로 만든 식혜를 추가합니다.', 'https://images.unsplash.com/photo-1607532941433-304659e8198a?auto=format&fit=crop&w=600&q=80'),
+      ('noincense', '향/초/제문 세트 제외', -5000, 'subtraction', '향, 초, 제문 세트가 필요 없는 경우 차감합니다.', NULL),
+      ('simplefruit', '과일류 간소화', -20000, 'subtraction', '기본 과일 중심으로 구성을 간소화합니다.', NULL)
+      ON CONFLICT (id) DO NOTHING
+    `);
+  }
+};
+
 const mapInquiry = (row) => ({
   id: row.id,
   customerName: row.customer_name,
@@ -301,6 +415,41 @@ const handleApi = async (request, env) => {
     });
   }
 
+  if (pathname === '/api/db-info') {
+    const info = getSafeDbInfo(env);
+    if (!info.configured) {
+      return json({
+        ok: false,
+        ...info,
+        error: 'DATABASE_URL or HYPERDRIVE binding is required.',
+      }, 500);
+    }
+
+    return json({ ok: true, ...info });
+  }
+
+  if (pathname === '/api/db-counts') {
+    await ensureSchema(env);
+    const [categories, baseMenus, catalogItems, customOptions, inquiries, users, reviews] = await Promise.all([
+      query(env, 'SELECT COUNT(*)::int AS count FROM hd_categories'),
+      query(env, 'SELECT COUNT(*)::int AS count FROM hd_base_menus'),
+      query(env, 'SELECT COUNT(*)::int AS count FROM hd_catalog_items'),
+      query(env, 'SELECT COUNT(*)::int AS count FROM hd_custom_options'),
+      query(env, 'SELECT COUNT(*)::int AS count FROM hd_inquiries'),
+      query(env, 'SELECT COUNT(*)::int AS count FROM hd_users'),
+      query(env, 'SELECT COUNT(*)::int AS count FROM hd_reviews'),
+    ]);
+    return json({
+      categories: categories.rows[0]?.count || 0,
+      baseMenus: baseMenus.rows[0]?.count || 0,
+      catalogItems: catalogItems.rows[0]?.count || 0,
+      customOptions: customOptions.rows[0]?.count || 0,
+      inquiries: inquiries.rows[0]?.count || 0,
+      users: users.rows[0]?.count || 0,
+      reviews: reviews.rows[0]?.count || 0,
+    });
+  }
+
   if (pathname === '/api/payments/toss/config' && method === 'GET') {
     const config = getTossConfig(env);
     return json({
@@ -310,7 +459,20 @@ const handleApi = async (request, env) => {
       enabled: Boolean(config.clientKey),
       serverConfigured: Boolean(config.secretKey),
       webhookConfigured: Boolean(config.webhookSecret || config.securityToken),
-    });
+    }, 200, { 'Cache-Control': 'no-store' });
+  }
+
+  if (pathname === '/api/payments/toss/debug' && method === 'GET') {
+    const config = getTossConfig(env);
+    return json({
+      clientKey: keyFingerprint(config.clientKey),
+      secretKey: keyFingerprint(config.secretKey),
+      clientLooksTest: config.clientKey.startsWith('test_ck_'),
+      secretLooksTest: config.secretKey.startsWith('test_sk_'),
+      serverConfigured: Boolean(config.secretKey),
+      likelyQuotedSecret: typeof env.TOSS_SECRET_KEY === 'string' && /^['"]|['"]$/.test(env.TOSS_SECRET_KEY.trim()),
+      likelyQuotedClient: typeof env.TOSS_CLIENT_KEY === 'string' && /^['"]|['"]$/.test(env.TOSS_CLIENT_KEY.trim()),
+    }, 200, { 'Cache-Control': 'no-store' });
   }
 
   if (pathname === '/api/payments/toss/confirm' && method === 'POST') {
@@ -345,7 +507,7 @@ const handleApi = async (request, env) => {
     if (!env.MIGRATION_TOKEN || token !== env.MIGRATION_TOKEN) {
       return errorJson('Forbidden', 403);
     }
-    await ensureSchema(env);
+    await ensureDefaultData(env);
     return json({ success: true });
   }
 
@@ -458,6 +620,7 @@ const handleApi = async (request, env) => {
   }
 
   if (pathname === '/api/categories' && method === 'GET') {
+    await ensureDefaultData(env);
     const result = await query(env, 'SELECT * FROM hd_categories ORDER BY created_at ASC');
     return json(result.rows);
   }
@@ -481,6 +644,7 @@ const handleApi = async (request, env) => {
   }
 
   if (pathname === '/api/base-menus' && method === 'GET') {
+    await ensureDefaultData(env);
     const result = await query(env, 'SELECT id, category_id as "categoryId", name, description, price, tags, item_ids as "itemIds", visible FROM hd_base_menus ORDER BY created_at ASC');
     return json(result.rows);
   }
@@ -508,6 +672,7 @@ const handleApi = async (request, env) => {
   }
 
   if (pathname === '/api/catalog-items' && method === 'GET') {
+    await ensureDefaultData(env);
     const result = await query(env, 'SELECT id, name, description, category, ingredients, points, visible, image_url as "imageUrl" FROM hd_catalog_items ORDER BY created_at ASC');
     return json(result.rows);
   }
@@ -532,6 +697,7 @@ const handleApi = async (request, env) => {
   }
 
   if (pathname === '/api/custom-options' && method === 'GET') {
+    await ensureDefaultData(env);
     const result = await query(env, 'SELECT id, name, price, type, description, image_url as "imageUrl" FROM hd_custom_options ORDER BY id ASC');
     return json(result.rows);
   }

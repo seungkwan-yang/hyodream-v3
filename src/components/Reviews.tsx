@@ -72,6 +72,11 @@ export const Reviews: React.FC<ReviewsProps> = ({ limit }) => {
       setLoading(true);
       const response = await fetch('/api/reviews');
       if (response.ok) {
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          const body = await response.text().catch(() => '');
+          throw new Error(`Reviews API returned non-JSON response. Check Cloudflare Worker routing. Body starts with: ${body.slice(0, 40)}`);
+        }
         const data = await response.json();
         setReviews(data);
       }
