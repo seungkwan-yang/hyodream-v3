@@ -24,6 +24,6 @@ not_found_handling = "single-page-application"
 # 1. npx wrangler r2 bucket create hyodream-uploads
 # 2. Uncomment this binding.
 #
- [[r2_buckets]]
- binding = "UPLOADS_BUCKET"
- bucket_name = "hyodream-uploads"
+# [[r2_buckets]]
+# binding = "UPLOADS_BUCKET"
+# bucket_name = "hyodream-uploads"
