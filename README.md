@@ -90,6 +90,12 @@ TOSS_SECURITY_TOKEN=""
 TOSS_WEBHOOK_SECRET=""
 TOSS_MERCHANT_NAME="효드림"
 TOSS_ENVIRONMENT="test"
+
+# PortOne V2 휴대폰 본인인증
+# 포트원 계정과 본인인증 서비스 계약이 필요합니다.
+PORTONE_STORE_ID=""
+PORTONE_CHANNEL_KEY=""
+PORTONE_API_SECRET=""
 ```
 
 중요:
@@ -121,6 +127,9 @@ TOSS_SECURITY_TOKEN
 TOSS_WEBHOOK_SECRET
 TOSS_MERCHANT_NAME
 TOSS_ENVIRONMENT
+PORTONE_STORE_ID
+PORTONE_CHANNEL_KEY
+PORTONE_API_SECRET
 ```
 
 Preview 배포에서도 같은 기능을 테스트하려면 Preview 환경에도 동일하게 등록합니다.
@@ -210,6 +219,34 @@ https://developers.tosspayments.com/1704695/accounts/2369331/phases/test/payment
 ```
 
 관리자 결제/주문 내역 화면에도 위 페이지를 여는 버튼이 있습니다.
+
+## PortOne 본인인증
+
+회원가입 화면에는 PortOne V2 휴대폰 본인인증 연동 코드가 포함되어 있습니다.
+
+동작 흐름:
+
+1. 프론트에서 `/api/identity/config`를 호출해 본인인증 사용 가능 여부와 `storeId`, `channelKey`를 가져옵니다.
+2. 사용자가 `본인인증` 버튼을 누르면 PortOne V2 JavaScript SDK로 휴대폰 본인인증 창을 엽니다.
+3. 인증 완료 후 `identityVerificationId`를 `/api/identity/verify`로 전달합니다.
+4. 서버는 `PORTONE_API_SECRET`으로 PortOne V2 REST API를 호출해 인증 결과를 검증합니다.
+5. 검증 성공 시 이름과 핸드폰번호를 회원가입 폼에 반영합니다.
+
+필요 환경변수:
+
+```text
+PORTONE_STORE_ID
+PORTONE_CHANNEL_KEY
+PORTONE_API_SECRET
+```
+
+Cloudflare Pages에서 사용하려면 Production과 Preview 환경 각각에 위 값을 등록해야 합니다.
+
+포트원 문서:
+
+```text
+https://developers.portone.io
+```
 
 ## DB 관련 참고
 

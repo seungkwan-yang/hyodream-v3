@@ -80,6 +80,55 @@ const tossConfig = {
   environment: process.env.TOSS_ENVIRONMENT || 'test',
 };
 
+const portOneConfig = {
+  storeId: process.env.PORTONE_STORE_ID || process.env.PORTONE_STORE_KEY || '',
+  channelKey: process.env.PORTONE_CHANNEL_KEY || '',
+  apiSecret: process.env.PORTONE_API_SECRET || '',
+};
+
+const getPortOneIdentityVerification = async (identityVerificationId) => {
+  if (!portOneConfig.apiSecret) {
+    throw new Error('PORTONE_API_SECRET is required.');
+  }
+
+  const response = await fetch(`https://api.portone.io/identity-verifications/${encodeURIComponent(identityVerificationId)}`, {
+    headers: {
+      Authorization: `PortOne ${portOneConfig.apiSecret}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(result.message || result.error?.message || 'PortOne identity verification lookup failed.');
+  }
+  return result.identityVerification || result;
+};
+
+const formatKoreanPhone = (value = '') => {
+  const cleaned = String(value).replace(/\D/g, '');
+  if (cleaned.length === 11) return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7)}`;
+  if (cleaned.length === 10) return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+  return value;
+};
+
+const normalizePortOneIdentity = (identityVerification) => {
+  const customer = identityVerification.verifiedCustomer || identityVerification.customer || identityVerification;
+  const status = identityVerification.status || identityVerification.identityVerificationStatus || '';
+
+  return {
+    verified: ['VERIFIED', 'SUCCESS', 'COMPLETED'].includes(String(status).toUpperCase()) || Boolean(identityVerification.verified),
+    identityVerificationId: identityVerification.id || identityVerification.identityVerificationId || '',
+    status,
+    name: customer.name || customer.fullName || '',
+    phone: formatKoreanPhone(customer.phoneNumber || customer.phone || customer.mobilePhoneNumber || ''),
+    birth: customer.birthDate || customer.birth || customer.birthday || '',
+    gender: customer.gender || '',
+    carrier: customer.carrier || '',
+    ci: customer.ci || customer.ciHash || '',
+    di: customer.di || customer.diHash || '',
+  };
+};
+
 const cancelTossPayment = async (paymentKey, cancelReason = '관리자 주문 취소') => {
   const cleanPaymentKey = String(paymentKey || '').trim().replace(/^['"]|['"]$/g, '');
   if (!cleanPaymentKey) return null;
@@ -426,6 +475,40 @@ app.post('/api/payments/toss/confirm', async (req, res) => {
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/identity/config', (_req, res) => {
+  res.json({
+    enabled: Boolean(portOneConfig.storeId && portOneConfig.channelKey && portOneConfig.apiSecret),
+    storeId: portOneConfig.storeId,
+    channelKey: portOneConfig.channelKey,
+    provider: 'portone-v2',
+  });
+});
+
+app.post('/api/identity/verify', async (req, res) => {
+  const { identityVerificationId } = req.body;
+  if (!identityVerificationId) {
+    return res.status(400).json({ error: '본인인증 완료 정보가 없습니다.' });
+  }
+  if (!portOneConfig.apiSecret) {
+    return res.status(503).json({ error: '본인인증 서버 설정이 필요합니다.' });
+  }
+
+  try {
+    const identityVerification = await getPortOneIdentityVerification(identityVerificationId);
+    const normalized = normalizePortOneIdentity(identityVerification);
+    if (!normalized.verified) {
+      return res.status(400).json({ error: '본인인증이 완료되지 않았습니다.' });
+    }
+
+    res.json({
+      verified: true,
+      ...normalized,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || '본인인증 처리 중 오류가 발생했습니다.' });
   }
 });
 
