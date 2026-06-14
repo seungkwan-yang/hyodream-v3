@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { UserPlus, MapPin, Check } from 'lucide-react';
+import { UserPlus, MapPin, Check, Search } from 'lucide-react';
 
 interface RegisterFormProps {
   isEditMode?: boolean;
@@ -28,6 +28,13 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ isEditMode, initialD
   });
 
   const [error, setError] = useState('');
+  const [usernameCheck, setUsernameCheck] = useState<{
+    checked: boolean;
+    available: boolean;
+    message: string;
+    value: string;
+  }>({ checked: false, available: false, message: '', value: '' });
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   React.useEffect(() => {
@@ -63,10 +70,60 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ isEditMode, initialD
       value = formatPhoneNumber(value);
     }
 
+    if (name === 'username') {
+      value = value.trim();
+      setUsernameCheck({ checked: false, available: false, message: '', value: '' });
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+  };
+
+  const handleUsernameCheck = async () => {
+    const username = formData.username.trim();
+    setError('');
+    setUsernameCheck({ checked: false, available: false, message: '', value: '' });
+
+    if (username.length < 3) {
+      setUsernameCheck({
+        checked: true,
+        available: false,
+        message: '아이디는 최소 3자 이상이어야 합니다.',
+        value: username
+      });
+      return;
+    }
+
+    setIsCheckingUsername(true);
+    try {
+      const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(username)}`);
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(data?.error || '아이디 중복 확인에 실패했습니다.');
+      }
+
+      setUsernameCheck({
+        checked: true,
+        available: Boolean(data.available),
+        message: data.available ? '사용 가능한 아이디입니다.' : '이미 사용 중인 아이디입니다.',
+        value: username
+      });
+    } catch (err: any) {
+      const rawMessage = err.message || '아이디 중복 확인에 실패했습니다.';
+      setUsernameCheck({
+        checked: true,
+        available: false,
+        message: rawMessage.includes('DATABASE_URL') || rawMessage.includes('HYPERDRIVE') || rawMessage.includes('데이터베이스 연결')
+          ? '현재 배포 환경의 DB 연결 설정을 확인해 주세요.'
+          : rawMessage,
+        value: username
+      });
+    } finally {
+      setIsCheckingUsername(false);
+    }
   };
 
   const handleAddressSearch = () => {
@@ -112,6 +169,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ isEditMode, initialD
     } else {
       if (formData.username.length < 3) {
         setError('아이디는 최소 3자 이상이어야 합니다.');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      if (!usernameCheck.checked || !usernameCheck.available || usernameCheck.value !== formData.username.trim()) {
+        setError('아이디 중복체크를 완료해 주세요.');
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
@@ -206,7 +268,44 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ isEditMode, initialD
           {!isEditMode && (
             <div>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>아이디 (필수)</label>
-              <input type="text" name="username" value={formData.username} onChange={handleChange} placeholder="영문자, 숫자 입력 (최소 3자)" required />
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+                <input
+                  type="text"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  placeholder="영문자, 숫자 입력 (최소 3자)"
+                  required
+                  style={{ flex: 1, minWidth: 0 }}
+                />
+                <button
+                  type="button"
+                  onClick={handleUsernameCheck}
+                  disabled={isCheckingUsername || formData.username.trim().length < 3}
+                  className="btn-secondary"
+                  style={{
+                    padding: '0 14px',
+                    borderRadius: '8px',
+                    whiteSpace: 'nowrap',
+                    minWidth: '104px',
+                    justifyContent: 'center',
+                    opacity: isCheckingUsername || formData.username.trim().length < 3 ? 0.55 : 1
+                  }}
+                >
+                  <Search size={15} />
+                  {isCheckingUsername ? '확인중' : '중복체크'}
+                </button>
+              </div>
+              {usernameCheck.message && (
+                <div style={{
+                  marginTop: '8px',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  color: usernameCheck.available ? 'var(--color-primary)' : 'var(--color-rose)'
+                }}>
+                  {usernameCheck.message}
+                </div>
+              )}
             </div>
           )}
 

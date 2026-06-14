@@ -430,6 +430,21 @@ app.post('/api/payments/toss/confirm', async (req, res) => {
 });
 
 // 0. Auth & Users
+app.get('/api/auth/check-username', async (req, res) => {
+  const username = String(req.query.username || '').trim();
+
+  if (username.length < 3) {
+    return res.status(400).json({ error: '아이디는 최소 3자 이상이어야 합니다.' });
+  }
+
+  try {
+    const result = await pool.query('SELECT username FROM hd_users WHERE username = $1', [username]);
+    res.json({ available: result.rows.length === 0 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/auth/register', async (req, res) => {
   const { username, password, name, email, hp, tel, zip, address1, address2, mailing, sms } = req.body;
   try {
@@ -481,6 +496,66 @@ app.post('/api/auth/login', async (req, res) => {
       sms: user.sms,
       points: user.points
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/auth/find-id', async (req, res) => {
+  const { name, hp } = req.body;
+  const normalizedHp = String(hp || '').replace(/\D/g, '');
+
+  if (!String(name || '').trim() || !normalizedHp) {
+    return res.status(400).json({ error: '이름과 핸드폰번호를 입력해 주세요.' });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT username, created_at as "createdAt"
+       FROM hd_users
+       WHERE name = $1 AND regexp_replace(COALESCE(hp, ''), '\\D', '', 'g') = $2
+       ORDER BY created_at DESC`,
+      [String(name).trim(), normalizedHp]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: '일치하는 회원 정보를 찾을 수 없습니다.' });
+    }
+
+    res.json({ users: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  const { username, name, hp, password } = req.body;
+  const normalizedHp = String(hp || '').replace(/\D/g, '');
+
+  if (!String(username || '').trim() || !String(name || '').trim() || !normalizedHp) {
+    return res.status(400).json({ error: '아이디, 이름, 핸드폰번호를 입력해 주세요.' });
+  }
+  if (!password || String(password).length < 3) {
+    return res.status(400).json({ error: '새 비밀번호는 3자 이상이어야 합니다.' });
+  }
+
+  try {
+    const userCheck = await pool.query(
+      `SELECT username
+       FROM hd_users
+       WHERE username = $1 AND name = $2 AND regexp_replace(COALESCE(hp, ''), '\\D', '', 'g') = $3`,
+      [String(username).trim(), String(name).trim(), normalizedHp]
+    );
+
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: '일치하는 회원 정보를 찾을 수 없습니다.' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    await pool.query('UPDATE hd_users SET password = $1 WHERE username = $2', [hashedPassword, String(username).trim()]);
+
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
