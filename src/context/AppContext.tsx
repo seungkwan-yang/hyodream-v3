@@ -60,6 +60,7 @@ export interface CustomOption {
   price: number;
   type: 'addition' | 'subtraction';
   description: string;
+  visible: boolean;
   imageUrl?: string;
 }
 
@@ -131,7 +132,7 @@ interface AppContextType {
   
   // Extra Custom Options
   customOptions: CustomOption[];
-  addCustomOption: (option: Omit<CustomOption, 'id'>) => CustomOption;
+  addCustomOption: (option: Omit<CustomOption, 'id' | 'visible'>) => CustomOption;
   updateCustomOption: (id: string, updated: Partial<CustomOption>) => void;
   deleteCustomOption: (id: string) => void;
   updateCustomOptionPrice: (id: string, price: number) => void;
@@ -493,11 +494,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Custom Options CMS Actions
-  const addCustomOption = (optionData: Omit<CustomOption, 'id'>) => {
+  const addCustomOption = (optionData: Omit<CustomOption, 'id' | 'visible'>) => {
     const newId = `opt-${optionData.type}-${Date.now()}`;
     const newOption: CustomOption = {
       ...optionData,
-      id: newId
+      id: newId,
+      visible: true
     };
     
     setCustomOptions(prev => [...prev, newOption]);

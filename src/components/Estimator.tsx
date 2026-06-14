@@ -56,14 +56,15 @@ export const Estimator: React.FC<EstimatorProps> = ({ onProceedToForm }) => {
   );
 
   // Separate custom options
-  const additions = customOptions.filter(o => o.type === 'addition');
-  const subtractions = customOptions.filter(o => o.type === 'subtraction');
+  const visibleCustomOptions = customOptions.filter(o => o.visible !== false);
+  const additions = visibleCustomOptions.filter(o => o.type === 'addition');
+  const subtractions = visibleCustomOptions.filter(o => o.type === 'subtraction');
 
   // Compute total price
   const calculateTotal = () => {
     if (!selectedPackage) return 0;
     let total = selectedPackage.price;
-    customOptions.forEach(opt => {
+    visibleCustomOptions.forEach(opt => {
       if (checkedOptionIds[opt.id]) {
         total += opt.price;
       }

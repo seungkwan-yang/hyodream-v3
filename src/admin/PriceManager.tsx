@@ -1136,12 +1136,13 @@ export const PriceManager: React.FC = () => {
                     style={{
                       padding: '14px',
                       borderRadius: '12px',
-                      backgroundColor: 'var(--bg-secondary)',
+                      backgroundColor: opt.visible ? 'var(--bg-secondary)' : '#FAF8F5',
                       border: activeEditingId === opt.id || editingOptId === opt.id ? '1.5px solid var(--color-primary)' : '1px solid var(--border-color)',
                       transition: 'var(--transition-smooth)',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '10px'
+                      gap: '10px',
+                      opacity: opt.visible ? 1 : 0.75
                     }}
                   >
                     {editingOptId === opt.id ? (
@@ -1282,7 +1283,24 @@ export const PriceManager: React.FC = () => {
                           </div>
 
                           <div style={{ flex: 1 }}>
-                            <strong style={{ fontSize: '0.85rem', color: 'var(--color-text-main)' }}>{opt.name.split(' (')[0]}</strong>
+                            <strong style={{
+                              fontSize: '0.85rem',
+                              color: opt.visible ? 'var(--color-text-main)' : 'var(--color-text-muted)',
+                              textDecoration: opt.visible ? 'none' : 'line-through'
+                            }}>{opt.name.split(' (')[0]}</strong>
+                            {!opt.visible && (
+                              <span style={{
+                                marginLeft: '8px',
+                                fontSize: '0.65rem',
+                                fontWeight: 800,
+                                color: 'var(--color-text-muted)',
+                                backgroundColor: 'rgba(0,0,0,0.05)',
+                                padding: '2px 6px',
+                                borderRadius: '999px'
+                              }}>
+                                숨김
+                              </span>
+                            )}
                             <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '2px', lineHeight: 1.3 }}>
                               {opt.description}
                             </p>
@@ -1296,6 +1314,23 @@ export const PriceManager: React.FC = () => {
                             }}>
                               {opt.type === 'addition' ? '추가단가' : '제외차감'}
                             </span>
+
+                            {/* Visibility Toggle */}
+                            <button
+                              onClick={() => {
+                                updateCustomOption(opt.id, { visible: !opt.visible });
+                                triggerFeedback(`맞춤 옵션이 ${!opt.visible ? '고객 페이지에 노출' : '숨김 처리'}되었습니다.`);
+                              }}
+                              title={opt.visible ? '고객 페이지에서 숨기기' : '고객 페이지에 노출하기'}
+                              style={{
+                                width: '24px', height: '24px', border: '1px solid var(--border-color)',
+                                borderRadius: '4px', cursor: 'pointer', backgroundColor: '#FFF',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                color: opt.visible ? 'var(--color-primary)' : 'var(--color-text-muted)'
+                              }}
+                            >
+                              {opt.visible ? <Eye size={12} /> : <EyeOff size={12} />}
+                            </button>
 
                             {/* Edit Action */}
                             <button

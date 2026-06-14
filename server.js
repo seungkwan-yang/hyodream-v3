@@ -863,7 +863,7 @@ app.delete('/api/catalog-items/:id', async (req, res) => {
 // 4. Custom Options CRUD
 app.get('/api/custom-options', async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, name, price, type, description, image_url as "imageUrl" FROM hd_custom_options ORDER BY id ASC');
+    const result = await pool.query('SELECT id, name, price, type, description, visible, image_url as "imageUrl" FROM hd_custom_options ORDER BY id ASC');
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -871,11 +871,11 @@ app.get('/api/custom-options', async (req, res) => {
 });
 
 app.post('/api/custom-options', async (req, res) => {
-  const { id, name, price, type, description, imageUrl } = req.body;
+  const { id, name, price, type, description, imageUrl, visible } = req.body;
   try {
     const result = await pool.query(
-      'INSERT INTO hd_custom_options (id, name, price, type, description, image_url) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, price, type, description, image_url as "imageUrl"',
-      [id, name, price, type, description, imageUrl]
+      'INSERT INTO hd_custom_options (id, name, price, type, description, image_url, visible) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, name, price, type, description, visible, image_url as "imageUrl"',
+      [id, name, price, type, description, imageUrl, visible !== undefined ? visible : true]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -885,11 +885,11 @@ app.post('/api/custom-options', async (req, res) => {
 
 app.put('/api/custom-options/:id', async (req, res) => {
   const { id } = req.params;
-  const { name, price, type, description, imageUrl } = req.body;
+  const { name, price, type, description, imageUrl, visible } = req.body;
   try {
     const result = await pool.query(
-      'UPDATE hd_custom_options SET name = $1, price = $2, type = $3, description = $4, image_url = $5 WHERE id = $6 RETURNING id, name, price, type, description, image_url as "imageUrl"',
-      [name, price, type, description, imageUrl, id]
+      'UPDATE hd_custom_options SET name = $1, price = $2, type = $3, description = $4, image_url = $5, visible = $6 WHERE id = $7 RETURNING id, name, price, type, description, visible, image_url as "imageUrl"',
+      [name, price, type, description, imageUrl, visible !== undefined ? visible : true, id]
     );
     res.json(result.rows[0]);
   } catch (err) {

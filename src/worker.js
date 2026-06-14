@@ -844,20 +844,20 @@ const handleApi = async (request, env) => {
 
   if (pathname === '/api/custom-options' && method === 'GET') {
     await ensureDefaultData(env);
-    const result = await query(env, 'SELECT id, name, price, type, description, image_url as "imageUrl" FROM hd_custom_options ORDER BY id ASC');
+    const result = await query(env, 'SELECT id, name, price, type, description, visible, image_url as "imageUrl" FROM hd_custom_options ORDER BY id ASC');
     return json(result.rows);
   }
 
   if (pathname === '/api/custom-options' && method === 'POST') {
-    const { id, name, price, type, description, imageUrl } = await readJson(request);
-    const result = await query(env, 'INSERT INTO hd_custom_options (id, name, price, type, description, image_url) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, price, type, description, image_url as "imageUrl"', [id, name, price, type, description, imageUrl]);
+    const { id, name, price, type, description, imageUrl, visible } = await readJson(request);
+    const result = await query(env, 'INSERT INTO hd_custom_options (id, name, price, type, description, image_url, visible) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, name, price, type, description, visible, image_url as "imageUrl"', [id, name, price, type, description, imageUrl, visible !== undefined ? visible : true]);
     return json(result.rows[0], 201);
   }
 
   params = match(pathname, '/api/custom-options/:id');
   if (params && method === 'PUT') {
-    const { name, price, type, description, imageUrl } = await readJson(request);
-    const result = await query(env, 'UPDATE hd_custom_options SET name = $1, price = $2, type = $3, description = $4, image_url = $5 WHERE id = $6 RETURNING id, name, price, type, description, image_url as "imageUrl"', [name, price, type, description, imageUrl, params.id]);
+    const { name, price, type, description, imageUrl, visible } = await readJson(request);
+    const result = await query(env, 'UPDATE hd_custom_options SET name = $1, price = $2, type = $3, description = $4, image_url = $5, visible = $6 WHERE id = $7 RETURNING id, name, price, type, description, visible, image_url as "imageUrl"', [name, price, type, description, imageUrl, visible !== undefined ? visible : true, params.id]);
     return json(result.rows[0]);
   }
 
