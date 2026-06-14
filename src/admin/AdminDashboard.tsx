@@ -252,7 +252,7 @@ export const AdminDashboard: React.FC = () => {
               {adminTab === 'dashboard' && '실시간 현황판 (Overview)'}
               {adminTab === 'inquiries' && '주문 및 결제 내역 관리'}
               {adminTab === 'users' && '회원 관리 및 구매 이력'}
-              {adminTab === 'reviews' && '고객 후기 및 관리자 댓글 관리'}
+              {adminTab === 'reviews' && '후기 관리'}
               {adminTab === 'pricing' && '상품 단가 및 맞춤 옵션 관리'}
               {adminTab === 'settings' && '시스템 테마 설정'}
             </h1>

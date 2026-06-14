@@ -23,7 +23,7 @@ interface ReviewPage {
   totalPages: number;
 }
 
-const PAGE_SIZE_OPTIONS = [20, 50, 100];
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 const truncate = (value: string | undefined | null, length = 80) => {
   if (!value) return '';
@@ -36,7 +36,7 @@ export const ReviewManager: React.FC = () => {
   const [replyDraft, setReplyDraft] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -168,7 +168,7 @@ export const ReviewManager: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-      <div className="glass-panel" style={{ padding: '16px 18px', borderRadius: '16px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+      <div className="glass-panel admin-review-toolbar" style={{ padding: '16px 18px', borderRadius: '16px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
         <div style={{ position: 'relative', flex: '1 1 320px' }}>
           <Search size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
           <input
@@ -219,7 +219,7 @@ export const ReviewManager: React.FC = () => {
           <span style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>{rangeLabel}</span>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
+        <div className="admin-review-table" style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '920px' }}>
             <thead>
               <tr style={{ backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
@@ -286,6 +286,67 @@ export const ReviewManager: React.FC = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="admin-review-mobile-list">
+          {loading ? (
+            <div style={{ padding: '36px 18px', textAlign: 'center', color: 'var(--color-text-sub)', fontWeight: 700 }}>
+              고객 후기를 불러오는 중입니다...
+            </div>
+          ) : reviews.length > 0 ? (
+            reviews.map(review => (
+              <article
+                key={review.id}
+                onClick={() => openReview(review)}
+                style={{
+                  padding: '16px',
+                  borderBottom: '1px solid var(--border-color)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  cursor: 'pointer'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'flex-start' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ color: 'var(--color-primary)', fontSize: '0.76rem', fontWeight: 800, marginBottom: '4px' }}>
+                      #{review.id} · {review.date}
+                    </div>
+                    <h3 style={{ fontSize: '0.98rem', lineHeight: 1.35, marginBottom: '4px' }}>
+                      {review.title || '제목 없는 후기'}
+                    </h3>
+                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem', fontWeight: 700 }}>
+                      {review.name} · {truncate(review.packageType, 28)}
+                    </div>
+                  </div>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--color-gold)', fontWeight: 900, flexShrink: 0 }}>
+                    <Star size={14} style={{ fill: 'var(--color-gold)' }} /> {review.rating}
+                  </span>
+                </div>
+
+                <p style={{ color: 'var(--color-text-sub)', fontSize: '0.84rem', lineHeight: 1.55 }}>
+                  {truncate(review.content, 96)}
+                </p>
+
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  {review.reviewHidden && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--color-rose)', fontSize: '0.76rem', fontWeight: 800 }}>
+                      <EyeOff size={13} /> 후기 숨김
+                    </span>
+                  )}
+                  {review.adminReply && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--color-primary)', fontSize: '0.76rem', fontWeight: 800 }}>
+                      <MessageSquareReply size={13} /> 댓글 있음
+                    </span>
+                  )}
+                </div>
+              </article>
+            ))
+          ) : (
+            <div style={{ padding: '36px 18px', textAlign: 'center', color: 'var(--color-text-sub)', fontWeight: 700 }}>
+              검색 조건에 맞는 후기가 없습니다.
+            </div>
+          )}
         </div>
 
         <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>

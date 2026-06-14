@@ -37,6 +37,17 @@ const syncPaymentFromStatus = (status: InquiryStatus): Inquiry['paymentStatus'] 
   return 'paid';
 };
 
+const formatAmount = (value: unknown) => {
+  const amount = Number(value ?? 0);
+  if (!Number.isFinite(amount)) return '';
+  return amount.toLocaleString('ko-KR');
+};
+
+const parseAmount = (value: string) => {
+  const normalized = value.replace(/[^\d]/g, '');
+  return normalized ? Number(normalized) : 0;
+};
+
 export const OrderEditorModal: React.FC<OrderEditorModalProps> = ({ order, onClose }) => {
   const { updateInquiry, deleteInquiry } = useApp();
   const [draft, setDraft] = useState<Partial<Inquiry>>({ ...order });
@@ -86,6 +97,7 @@ export const OrderEditorModal: React.FC<OrderEditorModalProps> = ({ order, onClo
 
   return createPortal(
     <div
+      className="admin-order-modal-overlay"
       onClick={onClose}
       style={{
         position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
@@ -95,7 +107,7 @@ export const OrderEditorModal: React.FC<OrderEditorModalProps> = ({ order, onClo
       }}
     >
       <div
-        className="glass-panel animate-fade-in-up"
+        className="glass-panel animate-fade-in-up admin-order-editor-modal"
         onClick={(e) => e.stopPropagation()}
         style={{
           maxWidth: '760px', width: '100%', maxHeight: '90vh',
@@ -161,7 +173,14 @@ export const OrderEditorModal: React.FC<OrderEditorModalProps> = ({ order, onClo
               </select>
             </div>
             <div className="responsive-form-grid-1-1">
-              <input type="number" value={draft.totalPrice ?? 0} onChange={(e) => setDraft(prev => ({ ...prev, totalPrice: Number(e.target.value) }))} placeholder="결제금액" />
+              <input
+                type="text"
+                inputMode="numeric"
+                className="admin-amount-input"
+                value={formatAmount(draft.totalPrice)}
+                onChange={(e) => setDraft(prev => ({ ...prev, totalPrice: parseAmount(e.target.value) }))}
+                placeholder="결제금액"
+              />
               <input type="text" value={draft.paymentMethod || ''} onChange={(e) => setDraft(prev => ({ ...prev, paymentMethod: e.target.value }))} placeholder="결제수단" />
             </div>
             <input type="text" value={draft.address || ''} onChange={(e) => setDraft(prev => ({ ...prev, address: e.target.value }))} placeholder="주소" />

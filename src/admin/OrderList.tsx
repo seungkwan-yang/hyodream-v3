@@ -22,6 +22,8 @@ export const OrderList: React.FC = () => {
   const [yearMonthFilter, setYearMonthFilter] = useState<string>('all');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>('all');
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   useEffect(() => {
     if (!selectedInquiry) return;
@@ -115,6 +117,13 @@ export const OrderList: React.FC = () => {
 
     return matchesSearch && matchesStatus && matchesYearMonth && matchesPayment;
   });
+  const totalPages = Math.max(1, Math.ceil(filteredInquiries.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedInquiries = filteredInquiries.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, statusFilter, yearMonthFilter, paymentMethodFilter]);
 
   // Extract unique Year/Month for dropdown
   const uniqueYearMonths = Array.from(new Set(
@@ -217,10 +226,23 @@ export const OrderList: React.FC = () => {
     }
   };
 
+  const renderOrderId = (orderId: string) => {
+    const value = String(orderId || '');
+    if (value.length <= 14) return value;
+    const splitIndex = Math.ceil(value.length / 2);
+
+    return (
+      <span className="admin-order-id">
+        <span>{value.slice(0, splitIndex)}</span>
+        <span>{value.slice(splitIndex)}</span>
+      </span>
+    );
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} className="animate-fade-in-up">
       {/* Filtering Control Bar */}
-      <div className="glass-panel" style={{
+      <div className="glass-panel admin-order-toolbar" style={{
         padding: '12px 16px',
         borderRadius: '16px',
         display: 'flex',
@@ -390,12 +412,12 @@ export const OrderList: React.FC = () => {
       </div>
 
       {/* Inquiry Data List */}
-      <div className="premium-card" style={{ borderRadius: '16px', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
+      <div className="premium-card admin-order-table" style={{ borderRadius: '16px', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '800px' }}>
             <thead>
               <tr style={{ backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
-                <th style={{ padding: '16px 20px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-sub)' }}>주문 번호</th>
+                <th style={{ padding: '16px 20px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-sub)', width: '150px' }}>주문 번호</th>
                 <th style={{ padding: '16px 20px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-sub)' }}>고객명</th>
                 <th style={{ padding: '16px 20px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-sub)' }}>상차림 종류</th>
                 <th style={{ padding: '16px 20px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-sub)' }}>제사 일정</th>
@@ -407,9 +429,11 @@ export const OrderList: React.FC = () => {
             </thead>
             <tbody>
               {filteredInquiries.length > 0 ? (
-                filteredInquiries.map(item => (
+                paginatedInquiries.map(item => (
                   <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'var(--transition-smooth)' }} className="table-row-hover">
-                    <td style={{ padding: '16px 20px', fontWeight: 600, fontSize: '0.85rem', color: 'var(--color-primary)' }}>{item.id}</td>
+                    <td style={{ padding: '16px 20px', fontWeight: 600, fontSize: '0.85rem', color: 'var(--color-primary)', width: '150px', maxWidth: '150px' }}>
+                      {renderOrderId(item.id)}
+                    </td>
                     <td style={{ padding: '16px 20px' }}>
                       <div style={{ fontWeight: 600 }}>{item.customerName}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
@@ -491,6 +515,102 @@ export const OrderList: React.FC = () => {
           </table>
         </div>
       </div>
+
+      <div className="admin-order-mobile-list">
+        {filteredInquiries.length > 0 ? (
+          paginatedInquiries.map(item => (
+            <article
+              key={item.id}
+              className="premium-card"
+              style={{
+                padding: '16px',
+                borderRadius: '14px',
+                backgroundColor: '#FFFFFF',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'flex-start' }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ color: 'var(--color-primary)', fontSize: '0.78rem', fontWeight: 800, marginBottom: '4px' }}>
+                    {renderOrderId(item.id)}
+                  </div>
+                  <h3 style={{ fontSize: '1rem', lineHeight: 1.35, marginBottom: '4px' }}>{item.customerName}</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-text-muted)', fontSize: '0.78rem', fontWeight: 700 }}>
+                    <Phone size={12} /> {item.phone}
+                  </div>
+                </div>
+                <span className={`badge badge-${item.status}`} style={{ gap: '5px', padding: '5px 8px', fontSize: '0.72rem', flexShrink: 0 }}>
+                  {getStatusIcon(item.status)}
+                  {getStatusLabel(item.status)}
+                </span>
+              </div>
+
+              <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--color-text-main)', lineHeight: 1.4 }}>
+                  {item.ritualType}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '6px 10px', fontSize: '0.8rem' }}>
+                  <span style={{ color: 'var(--color-text-muted)', fontWeight: 700 }}>일정</span>
+                  <span style={{ color: 'var(--color-text-sub)', fontWeight: 700 }}>{item.date}</span>
+                  <span style={{ color: 'var(--color-text-muted)', fontWeight: 700 }}>금액</span>
+                  <span style={{ color: 'var(--color-primary)', fontWeight: 900 }}>{item.totalPrice.toLocaleString()}원</span>
+                  <span style={{ color: 'var(--color-text-muted)', fontWeight: 700 }}>결제</span>
+                  <span style={{ color: getPaymentMethodBadgeStyle(item.paymentMethod).color, fontWeight: 800 }}>{item.paymentMethod || '토스페이'}</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => handleOpenDetail(item)}
+                  className="btn-secondary"
+                  style={{ flex: 1, justifyContent: 'center', padding: '10px 12px', borderRadius: '10px', fontSize: '0.82rem' }}
+                >
+                  <Edit3 size={14} /> 수정
+                </button>
+                <button
+                  onClick={() => handleDelete(item.id)}
+                  className="btn-secondary"
+                  style={{ flex: 1, justifyContent: 'center', padding: '10px 12px', borderRadius: '10px', fontSize: '0.82rem', color: 'var(--color-rose)', borderColor: 'var(--color-rose)' }}
+                >
+                  <Trash2 size={14} /> 삭제
+                </button>
+              </div>
+            </article>
+          ))
+        ) : (
+          <div className="glass-panel" style={{ padding: '36px 18px', borderRadius: '14px', textAlign: 'center', color: 'var(--color-text-muted)', fontWeight: 700 }}>
+            일치하는 결제 및 주문 내역이 존재하지 않습니다.
+          </div>
+        )}
+      </div>
+
+      {filteredInquiries.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.82rem', fontWeight: 700 }}>
+            {currentPage} / {totalPages} 페이지 · 총 {filteredInquiries.length.toLocaleString()}건
+          </span>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => setPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage <= 1}
+              className="btn-secondary"
+              style={{ padding: '8px 12px', borderRadius: '10px', fontSize: '0.82rem' }}
+            >
+              이전
+            </button>
+            <button
+              onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage >= totalPages}
+              className="btn-secondary"
+              style={{ padding: '8px 12px', borderRadius: '10px', fontSize: '0.82rem' }}
+            >
+              다음
+            </button>
+          </div>
+        </div>
+      )}
 
       {selectedInquiry && (
         <OrderEditorModal

@@ -374,6 +374,8 @@ h1, h2, h3, h4, .serif-font {
 /* Input Styles */
 input[type="text"], input[type="tel"], input[type="date"], input[type="password"], input[type="email"], select, textarea {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   padding: 12px 16px;
   border: 1.5px solid var(--border-color);
   background-color: #FFFFFF;
@@ -885,10 +887,43 @@ input:focus, select:focus, textarea:focus {
   flex: 1;
 }
 
+.admin-modal-content input,
+.admin-modal-content select,
+.admin-modal-content textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.admin-modal-content .responsive-form-grid-1-1,
+.admin-modal-content .responsive-form-grid-1-2 {
+  min-width: 0;
+}
+
+.admin-amount-input {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 480px) {
+  .admin-order-modal-overlay {
+    padding: 10px !important;
+    align-items: flex-start !important;
+  }
+
+  .admin-order-editor-modal {
+    max-height: calc(100vh - 20px) !important;
+    border-radius: 18px !important;
+  }
+
   .admin-modal-content {
     padding: 16px !important;
     padding-top: 36px !important;
+  }
+
+  .admin-modal-content input[type="date"] {
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 }
 
@@ -938,6 +973,106 @@ input:focus, select:focus, textarea:focus {
 }
 .table-row-hover:hover {
   background-color: var(--color-primary-fade) !important;
+}
+
+.admin-order-mobile-list {
+  display: none;
+}
+
+.admin-order-id {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 100%;
+  line-height: 1.25;
+  font-family: 'Outfit', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.admin-order-id span {
+  display: block;
+}
+
+.admin-review-mobile-list {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .admin-order-toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    flex-wrap: nowrap !important;
+    overflow: visible !important;
+    padding: 14px !important;
+    gap: 10px !important;
+  }
+
+  .admin-order-toolbar > div {
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  .admin-order-toolbar > div:last-child {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .admin-order-toolbar select,
+  .admin-order-toolbar button {
+    width: 100% !important;
+    justify-content: center !important;
+    min-height: 40px !important;
+  }
+
+  .admin-order-table {
+    display: none !important;
+  }
+
+  .admin-order-mobile-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .admin-review-toolbar {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    padding: 14px !important;
+  }
+
+  .admin-review-toolbar > div {
+    flex: none !important;
+    max-width: min(100%, 320px) !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  .admin-review-toolbar select,
+  .admin-review-toolbar button {
+    max-width: none !important;
+    width: min(100%, 180px) !important;
+  }
+
+  .admin-review-toolbar button {
+    justify-content: center !important;
+  }
+
+  .admin-review-table {
+    display: none !important;
+  }
+
+  .admin-review-mobile-list {
+    display: block !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .admin-order-toolbar > div:last-child {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 /* Custom responsive classes for Point Input & Grand Total */

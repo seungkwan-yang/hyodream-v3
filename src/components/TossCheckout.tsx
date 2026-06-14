@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, ShieldCheck, Check, Smartphone, Landmark, AlertCircle, Loader2 } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { DEFAULT_TOSS_MERCHANT_NAME, getTossRuntimeConfig, TOSS_PENDING_ORDER_KEY } from '../config/toss';
 import type { TossRuntimeConfig } from '../config/toss';
 
@@ -201,33 +200,17 @@ export const TossCheckout: React.FC<TossCheckoutProps> = ({
   };
 
   useEffect(() => {
-    if (step === 'processing') {
-      const interval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setTimeout(() => {
-              setStep('success');
-              // Celebrate payment completion!
-              triggerConfetti();
-            }, 500);
-            return 100;
-          }
-          return prev + 8;
-        });
-      }, 100);
-      return () => clearInterval(interval);
-    }
-  }, [step]);
+    if (step !== 'processing') return;
+    setProgress(35);
+    const timers = [
+      window.setTimeout(() => setProgress(65), 350),
+      window.setTimeout(() => setProgress(88), 900),
+    ];
 
-  function triggerConfetti() {
-    // Elegant left and right spray
-    confetti({
-      particleCount: 80,
-      spread: 70,
-      origin: { y: 0.6 }
-    });
-  };
+    return () => {
+      timers.forEach(window.clearTimeout);
+    };
+  }, [step]);
 
   const generateTxId = () => {
     const today = new Date();

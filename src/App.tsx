@@ -18,12 +18,18 @@ import { Phone, MapPin } from 'lucide-react';
 import { TOSS_PENDING_ORDER_KEY } from './config/toss';
 
 const PaymentReturnHandler: React.FC = () => {
-  const { addInquiry, setCustomerTab } = useApp();
+  const { addInquiry } = useApp();
   const [message, setMessage] = React.useState<string | null>(null);
+  const [completedOrder, setCompletedOrder] = React.useState<any>(null);
+  const handledRef = React.useRef(false);
 
   React.useEffect(() => {
+    if (handledRef.current) return;
     const params = new URLSearchParams(window.location.search);
     const paymentResult = params.get('paymentResult');
+
+    if (!paymentResult) return;
+    handledRef.current = true;
 
     if (paymentResult === 'fail') {
       const reason = params.get('message') || '결제가 취소되었거나 실패했습니다.';
@@ -51,7 +57,7 @@ const PaymentReturnHandler: React.FC = () => {
           throw new Error('결제 정보가 주문 정보와 일치하지 않습니다.');
         }
 
-        setMessage('Toss Payments 결제를 승인하고 있습니다...');
+        setMessage('결제를 승인하고 있습니다...');
         const response = await fetch('/api/payments/toss/confirm', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -64,7 +70,7 @@ const PaymentReturnHandler: React.FC = () => {
         }
 
         const methodLabel = pendingOrder.paymentMethod || payment.method || '토스페이';
-        addInquiry({
+        const savedOrder = addInquiry({
           ...pendingOrder.order,
           id: orderId,
           paymentMethod: methodLabel,
@@ -75,8 +81,8 @@ const PaymentReturnHandler: React.FC = () => {
 
         localStorage.removeItem(TOSS_PENDING_ORDER_KEY);
         window.history.replaceState({}, '', window.location.pathname);
-        setCustomerTab('mypage');
-        setMessage('결제가 승인되었습니다. 주문 내역으로 이동합니다.');
+        setCompletedOrder(savedOrder);
+        setMessage('결제가 정상 완료되었습니다.');
       } catch (err) {
         console.error('[HyoDream Toss] confirm failed:', err);
         setMessage(err instanceof Error ? err.message : '결제 승인 처리 중 오류가 발생했습니다.');
@@ -84,7 +90,7 @@ const PaymentReturnHandler: React.FC = () => {
     };
 
     confirmPayment();
-  }, [addInquiry, setCustomerTab]);
+  }, [addInquiry]);
 
   if (!message) return null;
 
@@ -100,8 +106,28 @@ const PaymentReturnHandler: React.FC = () => {
       padding: '20px'
     }}>
       <div className="premium-card" style={{ maxWidth: '420px', width: '100%', textAlign: 'center', padding: '28px' }}>
-        <strong style={{ display: 'block', marginBottom: '10px' }}>Toss Payments</strong>
+        <strong style={{ display: 'block', marginBottom: '10px' }}>결제 결과</strong>
         <p style={{ color: 'var(--color-text-sub)', lineHeight: 1.5 }}>{message}</p>
+        {completedOrder && (
+          <div style={{
+            marginTop: '18px',
+            padding: '16px',
+            borderRadius: '12px',
+            backgroundColor: 'var(--bg-secondary)',
+            textAlign: 'left',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            fontSize: '0.86rem'
+          }}>
+            <div><strong>주문번호</strong> <span style={{ color: 'var(--color-primary)', wordBreak: 'break-all' }}>{completedOrder.id}</span></div>
+            <div><strong>주문자</strong> {completedOrder.customerName}</div>
+            <div><strong>연락처</strong> {completedOrder.phone}</div>
+            <div><strong>제사 날짜</strong> {completedOrder.date}</div>
+            <div><strong>배송지</strong> {completedOrder.address} {completedOrder.addressDetail}</div>
+            <div><strong>결제금액</strong> {Number(completedOrder.totalPrice || 0).toLocaleString()}원</div>
+          </div>
+        )}
         <button className="btn-primary" onClick={() => setMessage(null)} style={{ marginTop: '16px' }}>
           확인
         </button>
