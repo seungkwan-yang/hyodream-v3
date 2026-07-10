@@ -220,14 +220,15 @@ export const Estimator: React.FC<EstimatorProps> = ({ onProceedToForm }) => {
                     key={menu.id}
                     onClick={() => setSelectedPkgId(menu.id)}
                     style={{
-                      padding: '20px 16px',
+                      padding: menu.imageUrl ? '0 16px 20px 16px' : '20px 16px',
                       borderRadius: '16px',
                       border: selectedPkgId === menu.id ? '2.5px solid var(--color-primary)' : '1px solid var(--border-color)',
                       backgroundColor: selectedPkgId === menu.id ? 'var(--color-primary-fade)' : '#FFFFFF',
                       cursor: 'pointer',
                       textAlign: 'center',
                       transition: 'var(--transition-spring)',
-                      position: 'relative'
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}
                   >
                     {selectedPkgId === menu.id && (
@@ -239,6 +240,21 @@ export const Estimator: React.FC<EstimatorProps> = ({ onProceedToForm }) => {
                       }}>
                         <Check size={12} />
                       </div>
+                    )}
+
+                    {menu.imageUrl && (
+                      <img
+                        src={menu.imageUrl}
+                        alt={`${menu.name} 이미지`}
+                        style={{
+                          width: 'calc(100% + 32px)',
+                          height: '96px',
+                          margin: '0 -16px 14px -16px',
+                          objectFit: 'cover',
+                          display: 'block',
+                          borderBottom: '1px solid var(--border-color)'
+                        }}
+                      />
                     )}
                     
                     <span className="serif-font" style={{

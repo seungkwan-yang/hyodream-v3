@@ -182,9 +182,11 @@ async function seedDatabase() {
           id VARCHAR(50) PRIMARY KEY,
           name VARCHAR(100) NOT NULL,
           visible BOOLEAN DEFAULT TRUE NOT NULL,
+          priority INTEGER DEFAULT 0 NOT NULL,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    await client.query('ALTER TABLE hd_categories ADD COLUMN IF NOT EXISTS priority INTEGER DEFAULT 0 NOT NULL;');
     
     await client.query(`
       CREATE TABLE IF NOT EXISTS hd_base_menus (
@@ -195,10 +197,12 @@ async function seedDatabase() {
           price INTEGER NOT NULL,
           tags TEXT[] NOT NULL DEFAULT '{}',
           item_ids TEXT[] NOT NULL DEFAULT '{}',
+          image_url TEXT,
           visible BOOLEAN DEFAULT TRUE NOT NULL,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    await client.query('ALTER TABLE hd_base_menus ADD COLUMN IF NOT EXISTS image_url TEXT;');
     
     await client.query(`
       CREATE TABLE IF NOT EXISTS hd_catalog_items (
@@ -263,9 +267,9 @@ async function seedDatabase() {
     if (parseInt(catCheck.rows[0].count) === 0) {
       console.log('[HyoDream DB Engine] Seeding default categories...');
       await client.query(`
-        INSERT INTO hd_categories (id, name, visible) VALUES
-        ('cat-ritual', '차례 / 기제사상', true),
-        ('cat-gosa', '고사 / 시제상', true)
+        INSERT INTO hd_categories (id, name, visible, priority) VALUES
+        ('cat-ritual', '차례 / 기제사상', true, 1),
+        ('cat-gosa', '고사 / 시제상', true, 2)
       `);
     }
 
@@ -698,7 +702,7 @@ app.get('/api/users/:username/orders', async (req, res) => {
 // 1. Categories CRUD
 app.get('/api/categories', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM hd_categories ORDER BY created_at ASC');
+    const result = await pool.query('SELECT * FROM hd_categories ORDER BY priority ASC, created_at ASC, id ASC');
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -706,11 +710,11 @@ app.get('/api/categories', async (req, res) => {
 });
 
 app.post('/api/categories', async (req, res) => {
-  const { id, name, visible } = req.body;
+  const { id, name, visible, priority } = req.body;
   try {
     const result = await pool.query(
-      'INSERT INTO hd_categories (id, name, visible) VALUES ($1, $2, $3) RETURNING *',
-      [id, name, visible !== undefined ? visible : true]
+      'INSERT INTO hd_categories (id, name, visible, priority) VALUES ($1, $2, $3, $4) RETURNING *',
+      [id, name, visible !== undefined ? visible : true, Number.isFinite(Number(priority)) ? Number(priority) : 0]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -720,11 +724,11 @@ app.post('/api/categories', async (req, res) => {
 
 app.put('/api/categories/:id', async (req, res) => {
   const { id } = req.params;
-  const { name, visible } = req.body;
+  const { name, visible, priority } = req.body;
   try {
     const result = await pool.query(
-      'UPDATE hd_categories SET name = $1, visible = $2 WHERE id = $3 RETURNING *',
-      [name, visible, id]
+      'UPDATE hd_categories SET name = $1, visible = $2, priority = COALESCE($3, priority) WHERE id = $4 RETURNING *',
+      [name, visible, Number.isFinite(Number(priority)) ? Number(priority) : null, id]
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -745,7 +749,7 @@ app.delete('/api/categories/:id', async (req, res) => {
 // 2. Base Menus CRUD
 app.get('/api/base-menus', async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, category_id as "categoryId", name, description, price, tags, item_ids as "itemIds", visible FROM hd_base_menus ORDER BY created_at ASC');
+    const result = await pool.query('SELECT id, category_id as "categoryId", name, description, price, tags, item_ids as "itemIds", image_url as "imageUrl", visible FROM hd_base_menus ORDER BY created_at ASC');
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -753,11 +757,11 @@ app.get('/api/base-menus', async (req, res) => {
 });
 
 app.post('/api/base-menus', async (req, res) => {
-  const { id, categoryId, name, description, price, tags, itemIds, visible } = req.body;
+  const { id, categoryId, name, description, price, tags, itemIds, imageUrl, visible } = req.body;
   try {
     const result = await pool.query(
-      'INSERT INTO hd_base_menus (id, category_id, name, description, price, tags, item_ids, visible) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, category_id as "categoryId", name, description, price, tags, item_ids as "itemIds", visible',
-      [id, categoryId, name, description, price, tags || [], itemIds || [], visible !== undefined ? visible : true]
+      'INSERT INTO hd_base_menus (id, category_id, name, description, price, tags, item_ids, image_url, visible) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, category_id as "categoryId", name, description, price, tags, item_ids as "itemIds", image_url as "imageUrl", visible',
+      [id, categoryId, name, description, price, tags || [], itemIds || [], imageUrl || null, visible !== undefined ? visible : true]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -767,11 +771,11 @@ app.post('/api/base-menus', async (req, res) => {
 
 app.put('/api/base-menus/:id', async (req, res) => {
   const { id } = req.params;
-  const { categoryId, name, description, price, tags, itemIds, visible } = req.body;
+  const { categoryId, name, description, price, tags, itemIds, imageUrl, visible } = req.body;
   try {
     const result = await pool.query(
-      'UPDATE hd_base_menus SET category_id = $1, name = $2, description = $3, price = $4, tags = $5, item_ids = $6, visible = $7 WHERE id = $8 RETURNING id, category_id as "categoryId", name, description, price, tags, item_ids as "itemIds", visible',
-      [categoryId, name, description, price, tags, itemIds, visible, id]
+      'UPDATE hd_base_menus SET category_id = $1, name = $2, description = $3, price = $4, tags = $5, item_ids = $6, image_url = $7, visible = $8 WHERE id = $9 RETURNING id, category_id as "categoryId", name, description, price, tags, item_ids as "itemIds", image_url as "imageUrl", visible',
+      [categoryId, name, description, price, tags, itemIds, imageUrl || null, visible, id]
     );
     res.json(result.rows[0]);
   } catch (err) {
