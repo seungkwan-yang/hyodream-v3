@@ -221,7 +221,7 @@ export const Header: React.FC = () => {
               boxShadow: 'none'
             }}
           >
-            <CalendarCheck size={16} /> 실시간 맞춤 주문
+            <CalendarCheck size={16} /> 맞춤 주문
           </button>
         )}
 
@@ -295,7 +295,7 @@ export const Header: React.FC = () => {
                   className="btn-primary"
                   style={{ width: '100%', justifyContent: 'center', padding: '12px 20px', fontSize: '0.9rem', borderRadius: '12px' }}
                 >
-                  <CalendarCheck size={16} /> 실시간 맞춤 주문하기
+                  <CalendarCheck size={16} /> 맞춤 주문하기
                 </button>
                 <div
                   onClick={() => { handleToggleViewMode(); setIsMobileMenuOpen(false); }}

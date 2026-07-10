@@ -40,6 +40,7 @@ export interface MenuCategory {
   id: string;
   name: string;
   visible: boolean;
+  priority: number;
 }
 
 // Base menu packages
@@ -51,6 +52,7 @@ export interface BaseMenu {
   price: number;
   tags: string[];
   itemIds: string[]; // List of CatalogItem IDs included in this package
+  imageUrl?: string;
   visible: boolean;  // Show/Hide toggle status
 }
 
@@ -106,7 +108,7 @@ interface AppContextType {
   
   // Menu Categories
   menuCategories: MenuCategory[];
-  addMenuCategory: (category: Omit<MenuCategory, 'id' | 'visible'>) => MenuCategory;
+  addMenuCategory: (category: Omit<MenuCategory, 'id' | 'visible' | 'priority'> & Partial<Pick<MenuCategory, 'priority'>>) => MenuCategory;
   updateMenuCategory: (id: string, updated: Partial<MenuCategory>) => void;
   deleteMenuCategory: (id: string) => void;
 
@@ -166,6 +168,13 @@ const readApiJson = async <T,>(response: Response): Promise<T> => {
   return response.json();
 };
 
+const sortMenuCategories = (categories: MenuCategory[]) =>
+  [...categories].sort((a, b) => {
+    const priorityA = Number.isFinite(a.priority) ? a.priority : 0;
+    const priorityB = Number.isFinite(b.priority) ? b.priority : 0;
+    return priorityA - priorityB;
+  });
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const saved = localStorage.getItem('hd_viewMode');
@@ -207,7 +216,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const loadResource = async <T,>(
         label: string,
         url: string,
-        setter: React.Dispatch<React.SetStateAction<T[]>>
+        setter: (items: T[]) => void
       ) => {
         try {
           const response = await fetch(url);
@@ -221,7 +230,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsLoading(true);
 
         await Promise.all([
-          loadResource<MenuCategory>('categories', `${API_BASE}/api/categories`, setMenuCategories),
+          loadResource<MenuCategory>('categories', `${API_BASE}/api/categories`, (categories) => setMenuCategories(sortMenuCategories(categories))),
           loadResource<BaseMenu>('base menus', `${API_BASE}/api/base-menus`, setBaseMenus),
           loadResource<CatalogItem>('catalog items', `${API_BASE}/api/catalog-items`, setCatalogItems),
           loadResource<CustomOption>('custom options', `${API_BASE}/api/custom-options`, setCustomOptions),
@@ -273,16 +282,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [currentUser]);
 
   // Categories CRUD
-  const addMenuCategory = (catData: Omit<MenuCategory, 'id' | 'visible'>) => {
+  const addMenuCategory = (catData: Omit<MenuCategory, 'id' | 'visible' | 'priority'> & Partial<Pick<MenuCategory, 'priority'>>) => {
     const newId = `cat-${Date.now()}`;
+    const nextPriority = Math.max(0, ...menuCategories.map(cat => cat.priority ?? 0)) + 1;
     const newCategory: MenuCategory = {
       ...catData,
       id: newId,
-      visible: true
+      visible: true,
+      priority: catData.priority ?? nextPriority
     };
     
     // Optimistic UI update
-    setMenuCategories(prev => [...prev, newCategory]);
+    setMenuCategories(prev => sortMenuCategories([...prev, newCategory]));
 
     // DB Async Sync
     fetch(`${API_BASE}/api/categories`, {
@@ -296,7 +307,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateMenuCategory = (id: string, updated: Partial<MenuCategory>) => {
     setMenuCategories(prev =>
-      prev.map(cat => (cat.id === id ? { ...cat, ...updated } : cat))
+      sortMenuCategories(prev.map(cat => (cat.id === id ? { ...cat, ...updated } : cat)))
     );
 
     // Sync to backend DB with synchronized merged payload

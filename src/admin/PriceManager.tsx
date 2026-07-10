@@ -37,6 +37,7 @@ export const PriceManager: React.FC = () => {
   // Menu Category CMS States
   const [showAddCategoryForm, setShowAddCategoryForm] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryPriority, setNewCategoryPriority] = useState('');
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [editCategoryName, setEditCategoryName] = useState('');
 
@@ -50,6 +51,7 @@ export const PriceManager: React.FC = () => {
   const [newBaseDesc, setNewBaseDesc] = useState('');
   const [newBaseTags, setNewBaseTags] = useState('');
   const [newBaseCategoryId, setNewBaseCategoryId] = useState('');
+  const [newBaseImageUrl, setNewBaseImageUrl] = useState('');
 
   // Editing Base Menu States
   const [editingBaseId, setEditingBaseId] = useState<string | null>(null);
@@ -58,6 +60,7 @@ export const PriceManager: React.FC = () => {
   const [editBaseDesc, setEditBaseDesc] = useState('');
   const [editBaseTags, setEditBaseTags] = useState('');
   const [editBaseCategoryId, setEditBaseCategoryId] = useState('');
+  const [editBaseImageUrl, setEditBaseImageUrl] = useState('');
 
   // New Dish CMS Form States
   const [newDishName, setNewDishName] = useState('');
@@ -94,6 +97,8 @@ export const PriceManager: React.FC = () => {
   // Image Upload Loading States
   const [uploadingNewDish, setUploadingNewDish] = useState(false);
   const [uploadingEditDish, setUploadingEditDish] = useState(false);
+  const [uploadingNewBase, setUploadingNewBase] = useState(false);
+  const [uploadingEditBase, setUploadingEditBase] = useState(false);
   const [uploadingNewOpt, setUploadingNewOpt] = useState(false);
   const [uploadingEditOpt, setUploadingEditOpt] = useState(false);
 
@@ -151,14 +156,21 @@ export const PriceManager: React.FC = () => {
   };
 
   // Category CRUD Handlers
+  const nextCategoryPriority = Math.max(0, ...menuCategories.map(cat => cat.priority ?? 0)) + 1;
+
   const handleAddCategorySubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCategoryName.trim()) {
       alert('카테고리 이름을 입력해 주세요.');
       return;
     }
-    addMenuCategory({ name: newCategoryName });
+    const priority = parseInt(newCategoryPriority, 10);
+    addMenuCategory({
+      name: newCategoryName,
+      priority: Number.isFinite(priority) ? priority : nextCategoryPriority
+    });
     setNewCategoryName('');
+    setNewCategoryPriority('');
     setShowAddCategoryForm(false);
     triggerFeedback('새로운 상차림 카테고리가 성공적으로 추가되었습니다.');
   };
@@ -176,6 +188,12 @@ export const PriceManager: React.FC = () => {
     updateMenuCategory(editingCategoryId!, { name: editCategoryName });
     setEditingCategoryId(null);
     triggerFeedback('카테고리 명칭이 성공적으로 수정되었습니다.');
+  };
+
+  const handleCategoryPriorityChange = (cat: MenuCategory, value: string) => {
+    const priority = parseInt(value, 10);
+    updateMenuCategory(cat.id, { priority: Number.isFinite(priority) ? priority : 0 });
+    triggerFeedback('카테고리 우선순위가 변경되었습니다.');
   };
 
   // Base Menu CMS Handlers
@@ -199,7 +217,8 @@ export const PriceManager: React.FC = () => {
       price: priceNum,
       description: newBaseDesc || '상세 상차림 특징 설명이 없습니다.',
       tags: tagsArray.length > 0 ? tagsArray : ['맞춤 차림'],
-      itemIds: []
+      itemIds: [],
+      imageUrl: newBaseImageUrl.trim() || undefined
     });
 
     setNewBaseName('');
@@ -207,6 +226,7 @@ export const PriceManager: React.FC = () => {
     setNewBaseDesc('');
     setNewBaseTags('');
     setNewBaseCategoryId('');
+    setNewBaseImageUrl('');
     setShowAddBaseMenuForm(false);
     triggerFeedback('새로운 상차림 패키지가 정상적으로 추가되었습니다.');
   };
@@ -218,6 +238,7 @@ export const PriceManager: React.FC = () => {
     setEditBaseDesc(menu.description);
     setEditBaseTags(menu.tags.join(', '));
     setEditBaseCategoryId(menu.categoryId);
+    setEditBaseImageUrl(menu.imageUrl || '');
   };
 
   const handleSaveEditBaseMenu = () => {
@@ -236,10 +257,12 @@ export const PriceManager: React.FC = () => {
       price: priceNum,
       description: editBaseDesc,
       tags: tagsArray,
-      categoryId: editBaseCategoryId
+      categoryId: editBaseCategoryId,
+      imageUrl: editBaseImageUrl.trim() || undefined
     });
 
     setEditingBaseId(null);
+    setEditBaseImageUrl('');
     triggerFeedback('상차림 패키지 상세 정보가 성공적으로 수정되었습니다.');
   };
 
@@ -479,7 +502,7 @@ export const PriceManager: React.FC = () => {
                   borderRadius: '12px',
                   marginBottom: '20px'
                 }}>
-                  <form onSubmit={handleAddCategorySubmit} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
+                  <form onSubmit={handleAddCategorySubmit} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                     <div style={{ flex: 1 }}>
                       <label style={{ fontSize: '0.75rem', fontWeight: 700, display: 'block', marginBottom: '6px' }}>새 카테고리 이름 *</label>
                       <input
@@ -487,6 +510,17 @@ export const PriceManager: React.FC = () => {
                         placeholder="예: 묘사 / 시제상"
                         value={newCategoryName}
                         onChange={(e) => setNewCategoryName(e.target.value)}
+                        style={{ fontSize: '0.85rem', padding: '8px 12px', width: '100%' }}
+                      />
+                    </div>
+                    <div style={{ width: '120px' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, display: 'block', marginBottom: '6px' }}>우선순위</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder={String(nextCategoryPriority)}
+                        value={newCategoryPriority}
+                        onChange={(e) => setNewCategoryPriority(e.target.value)}
                         style={{ fontSize: '0.85rem', padding: '8px 12px', width: '100%' }}
                       />
                     </div>
@@ -542,11 +576,22 @@ export const PriceManager: React.FC = () => {
                       </div>
                     ) : (
                       <>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                           <span style={{
                             width: '8px', height: '8px', borderRadius: '50%',
                             backgroundColor: cat.visible ? 'var(--color-primary)' : 'var(--color-text-muted)'
                           }} />
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>
+                            우선
+                            <input
+                              type="number"
+                              min="0"
+                              value={cat.priority ?? 0}
+                              onChange={(e) => handleCategoryPriorityChange(cat, e.target.value)}
+                              title="낮은 숫자가 먼저 노출됩니다"
+                              style={{ width: '58px', padding: '4px 6px', fontSize: '0.78rem' }}
+                            />
+                          </label>
                           <strong style={{ fontSize: '0.88rem', color: 'var(--color-text-main)' }}>{cat.name}</strong>
                           <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>
                             (상차림: {baseMenus.filter(m => m.categoryId === cat.id).length}개)
@@ -705,6 +750,64 @@ export const PriceManager: React.FC = () => {
                       />
                     </div>
 
+                    <div>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, display: 'block', marginBottom: '4px' }}>상차림 이미지 (선택)</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '10px', alignItems: 'center' }}>
+                        <input
+                          type="text"
+                          placeholder="이미지 URL을 입력하거나 오른쪽에서 업로드"
+                          value={newBaseImageUrl}
+                          onChange={(e) => setNewBaseImageUrl(e.target.value)}
+                          style={{ fontSize: '0.85rem', padding: '8px 12px', width: '100%' }}
+                        />
+                        <label style={{
+                          position: 'relative',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          minWidth: '104px',
+                          height: '38px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--border-color)',
+                          backgroundColor: '#FFF',
+                          color: uploadingNewBase ? 'var(--color-text-muted)' : 'var(--color-primary)',
+                          fontSize: '0.78rem',
+                          fontWeight: 800,
+                          cursor: uploadingNewBase ? 'not-allowed' : 'pointer',
+                          overflow: 'hidden'
+                        }}>
+                          {uploadingNewBase ? '업로드 중...' : '이미지 업로드'}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            disabled={uploadingNewBase}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              setUploadingNewBase(true);
+                              const url = await uploadImageToServer(file);
+                              setUploadingNewBase(false);
+                              if (url) setNewBaseImageUrl(url);
+                              e.target.value = '';
+                            }}
+                            style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+                          />
+                        </label>
+                      </div>
+                      {newBaseImageUrl && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
+                          <img src={newBaseImageUrl} alt="상차림 이미지 미리보기" style={{ width: '72px', height: '48px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border-color)' }} />
+                          <button
+                            type="button"
+                            onClick={() => setNewBaseImageUrl('')}
+                            style={{ border: 'none', background: 'none', color: 'var(--color-rose)', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer' }}
+                          >
+                            이미지 삭제
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
                     <button
                       type="submit"
                       className="btn-primary"
@@ -791,6 +894,64 @@ export const PriceManager: React.FC = () => {
                           />
                         </div>
 
+                        <div>
+                          <label style={{ fontSize: '0.7rem', fontWeight: 700, display: 'block', marginBottom: '2px' }}>상차림 이미지</label>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', alignItems: 'center' }}>
+                            <input
+                              type="text"
+                              value={editBaseImageUrl}
+                              onChange={(e) => setEditBaseImageUrl(e.target.value)}
+                              placeholder="이미지 URL"
+                              style={{ fontSize: '0.8rem', padding: '6px 10px', width: '100%' }}
+                            />
+                            <label style={{
+                              position: 'relative',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              minWidth: '92px',
+                              height: '32px',
+                              borderRadius: '6px',
+                              border: '1px solid var(--border-color)',
+                              backgroundColor: '#FFF',
+                              color: uploadingEditBase ? 'var(--color-text-muted)' : 'var(--color-primary)',
+                              fontSize: '0.72rem',
+                              fontWeight: 800,
+                              cursor: uploadingEditBase ? 'not-allowed' : 'pointer',
+                              overflow: 'hidden'
+                            }}>
+                              {uploadingEditBase ? '업로드 중...' : '업로드'}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                disabled={uploadingEditBase}
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  setUploadingEditBase(true);
+                                  const url = await uploadImageToServer(file);
+                                  setUploadingEditBase(false);
+                                  if (url) setEditBaseImageUrl(url);
+                                  e.target.value = '';
+                                }}
+                                style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+                              />
+                            </label>
+                          </div>
+                          {editBaseImageUrl && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                              <img src={editBaseImageUrl} alt="상차림 이미지 미리보기" style={{ width: '64px', height: '42px', objectFit: 'cover', borderRadius: '5px', border: '1px solid var(--border-color)' }} />
+                              <button
+                                type="button"
+                                onClick={() => setEditBaseImageUrl('')}
+                                style={{ border: 'none', background: 'none', color: 'var(--color-rose)', fontSize: '0.68rem', fontWeight: 800, cursor: 'pointer' }}
+                              >
+                                삭제
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', marginTop: '4px' }}>
                           <button
                             onClick={() => setEditingBaseId(null)}
@@ -812,33 +973,42 @@ export const PriceManager: React.FC = () => {
                       <>
                         {/* Header info */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
-                          <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                              <strong style={{
-                                fontSize: '0.95rem',
-                                color: menu.visible ? 'var(--color-text-main)' : 'var(--color-text-muted)',
-                                textDecoration: menu.visible ? 'none' : 'line-through'
-                              }}>
-                                {menu.name}
-                              </strong>
-                              <span style={{
-                                padding: '2px 8px',
-                                fontSize: '0.7rem',
-                                backgroundColor: 'var(--color-primary-fade)',
-                                color: 'var(--color-primary-dark)',
-                                borderRadius: '12px',
-                                fontWeight: 700
-                              }}>
-                                {menuCategories.find(c => c.id === menu.categoryId)?.name || '분류 미지정'}
-                              </span>
-                              {!menu.visible && (
-                                <span style={{ fontSize: '0.7rem', color: 'var(--color-rose)', fontWeight: 700 }}>[숨김 상태]</span>
-                              )}
-                            </div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '6px' }}>
-                              {menu.tags.map((t, idx) => (
-                                <span key={idx} style={{ marginRight: '6px', fontWeight: 600, color: 'var(--color-primary)' }}>#{t}</span>
-                              ))}
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', minWidth: 0 }}>
+                            {menu.imageUrl && (
+                              <img
+                                src={menu.imageUrl}
+                                alt={`${menu.name} 이미지`}
+                                style={{ width: '72px', height: '54px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border-color)', flexShrink: 0 }}
+                              />
+                            )}
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                <strong style={{
+                                  fontSize: '0.95rem',
+                                  color: menu.visible ? 'var(--color-text-main)' : 'var(--color-text-muted)',
+                                  textDecoration: menu.visible ? 'none' : 'line-through'
+                                }}>
+                                  {menu.name}
+                                </strong>
+                                <span style={{
+                                  padding: '2px 8px',
+                                  fontSize: '0.7rem',
+                                  backgroundColor: 'var(--color-primary-fade)',
+                                  color: 'var(--color-primary-dark)',
+                                  borderRadius: '12px',
+                                  fontWeight: 700
+                                }}>
+                                  {menuCategories.find(c => c.id === menu.categoryId)?.name || '분류 미지정'}
+                                </span>
+                                {!menu.visible && (
+                                  <span style={{ fontSize: '0.7rem', color: 'var(--color-rose)', fontWeight: 700 }}>[숨김 상태]</span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '6px' }}>
+                                {menu.tags.map((t, idx) => (
+                                  <span key={idx} style={{ marginRight: '6px', fontWeight: 600, color: 'var(--color-primary)' }}>#{t}</span>
+                                ))}
+                              </div>
                             </div>
                           </div>
 

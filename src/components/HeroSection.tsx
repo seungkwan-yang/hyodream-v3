@@ -1,9 +1,15 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { Sparkles, Calendar, ShieldCheck, Truck } from 'lucide-react';
+import { ImageIcon, Sparkles, Tag } from 'lucide-react';
 
 export const HeroSection: React.FC = () => {
-  const { setCustomerTab } = useApp();
+  const { setCustomerTab, menuCategories, baseMenus } = useApp();
+  const firstPriorityCategory = menuCategories
+    .filter(category => category.visible)
+    .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))[0];
+  const firstCategoryMenus = firstPriorityCategory
+    ? baseMenus.filter(menu => menu.visible && menu.categoryId === firstPriorityCategory.id)
+    : [];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '64px' }} className="animate-fade-in-up traditional-bg">
@@ -59,7 +65,7 @@ export const HeroSection: React.FC = () => {
             className="btn-primary"
             style={{ padding: '16px 36px', fontSize: '1.05rem' }}
           >
-            실시간 맞춤상 주문하기
+            맞춤상 주문하기
           </button>
           <button
             onClick={() => setCustomerTab('menu')}
@@ -71,75 +77,151 @@ export const HeroSection: React.FC = () => {
         </div>
       </section>
 
-      {/* Core Core Values Section */}
+      {/* First priority category base menus */}
       <section style={{ padding: '0 20px' }}>
         <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-          <h2 className="serif-font" style={{ fontSize: '2rem', fontWeight: 800 }}>효드림이 약속하는 3대 원칙</h2>
+          <h2 className="serif-font" style={{ fontSize: '2rem', fontWeight: 800 }}>
+            {firstPriorityCategory ? firstPriorityCategory.name : '기본 상차림 목록'}
+          </h2>
           <div className="korean-divider" />
           <p style={{ fontSize: '0.95rem', color: 'var(--color-text-sub)' }}>
-            어려운 제사 음식, 위생적이고 정직한 시스템으로 신뢰를 올리겠습니다.
+            우선순위가 가장 높은 상차림 카테고리의 기본 상차림 목록입니다.
           </p>
         </div>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '32px'
-        }}>
-          {/* Card 1 */}
-          <div className="premium-card korean-border-box" style={{ padding: '40px 32px', textAlign: 'center' }}>
-            <div style={{
-              width: '60px', height: '60px', borderRadius: '50%',
-              backgroundColor: 'var(--color-primary-fade)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--color-primary)', margin: '0 auto 24px auto'
-            }}>
-              <Calendar size={28} />
-            </div>
-            <h3 className="serif-font" style={{ fontSize: '1.25rem', marginBottom: '14px', fontWeight: 700 }}>
-              배송 당일 새벽 조리 원칙
-            </h3>
-            <p style={{ fontSize: '0.9rem', color: 'var(--color-text-sub)', lineHeight: '1.6' }}>
-              미리 만들어 급속 냉동해두는 기성품이 아닙니다. 제사 및 행사 일정 당일 새벽 1시부터 손수 장을 본 신선 식자재로 정성껏 준비하여 즉시 배송합니다.
-            </p>
-          </div>
+        {firstCategoryMenus.length > 0 ? (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gap: '24px'
+          }}>
+            {firstCategoryMenus.map(menu => (
+              <div key={menu.id} className="premium-card korean-border-box" style={{
+                padding: '28px',
+                backgroundColor: '#FFFFFF',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                minHeight: '260px',
+                overflow: 'hidden'
+              }}>
+                {menu.imageUrl ? (
+                  <div style={{
+                    width: 'calc(100% + 56px)',
+                    height: '190px',
+                    margin: '-28px -28px 22px -28px',
+                    overflow: 'hidden',
+                    borderBottom: '1px solid var(--border-color)',
+                    backgroundColor: '#FAF8F5'
+                  }}>
+                    <img
+                      src={menu.imageUrl}
+                      alt={`${menu.name} 이미지`}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    />
+                  </div>
+                ) : (
+                  <div style={{
+                    width: 'calc(100% + 56px)',
+                    minHeight: '96px',
+                    margin: '-28px -28px 22px -28px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    borderBottom: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-secondary)',
+                    color: 'var(--color-text-muted)',
+                    fontSize: '0.82rem',
+                    fontWeight: 700
+                  }}>
+                    <ImageIcon size={18} />
+                    상차림 이미지 준비 중
+                  </div>
+                )}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'flex-start', marginBottom: '16px' }}>
+                    <h3 className="serif-font" style={{ fontSize: '1.24rem', fontWeight: 800, lineHeight: 1.35 }}>
+                      {menu.name}
+                    </h3>
+                    <span style={{
+                      flexShrink: 0,
+                      color: 'var(--color-primary)',
+                      backgroundColor: 'var(--color-primary-fade)',
+                      borderRadius: '999px',
+                      padding: '6px 10px',
+                      fontSize: '0.72rem',
+                      fontWeight: 800
+                    }}>
+                      {menu.itemIds.length}품목
+                    </span>
+                  </div>
 
-          {/* Card 2 */}
-          <div className="premium-card korean-border-box" style={{ padding: '40px 32px', textAlign: 'center' }}>
-            <div style={{
-              width: '60px', height: '60px', borderRadius: '50%',
-              backgroundColor: 'rgba(197, 155, 39, 0.1)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--color-gold)', margin: '0 auto 24px auto'
-            }}>
-              <ShieldCheck size={28} />
-            </div>
-            <h3 className="serif-font" style={{ fontSize: '1.25rem', marginBottom: '14px', fontWeight: 700 }}>
-              HACCP급 위생 조리 환경
-            </h3>
-            <p style={{ fontSize: '0.9rem', color: 'var(--color-text-sub)', lineHeight: '1.6' }}>
-              부평에 위치한 직영 청결 클린룸 시설에서 소독된 조리 기구와 위생 장비를 입고 철저한 위생 감시 하에 조리합니다. 정갈함과 위생은 타협할 수 없는 효드림의 자존심입니다.
-            </p>
-          </div>
+                  <p style={{ fontSize: '0.9rem', color: 'var(--color-text-sub)', lineHeight: 1.62, marginBottom: '18px' }}>
+                    {menu.description}
+                  </p>
 
-          {/* Card 3 */}
-          <div className="premium-card korean-border-box" style={{ padding: '40px 32px', textAlign: 'center' }}>
-            <div style={{
-              width: '60px', height: '60px', borderRadius: '50%',
-              backgroundColor: 'rgba(200, 122, 83, 0.1)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--color-rose)', margin: '0 auto 24px auto'
-            }}>
-              <Truck size={28} />
-            </div>
-            <h3 className="serif-font" style={{ fontSize: '1.25rem', marginBottom: '14px', fontWeight: 700 }}>
-              안심 직배송 직원 직접 전달
-            </h3>
-            <p style={{ fontSize: '0.9rem', color: 'var(--color-text-sub)', lineHeight: '1.6' }}>
-              파손 위험이 있는 일반 퀵 서비스나 일반 택배 배송을 이용하지 않습니다. 보냉 밀폐 전용 플라스틱 패키지에 담아 효드림 직원이 직접 자택 현관문 앞까지 도어 투 도어로 안전하게 전달해 드립니다.
-            </p>
+                  {menu.tags.length > 0 && (
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '20px' }}>
+                      {menu.tags.map(tag => (
+                        <span key={tag} style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          color: 'var(--color-text-sub)',
+                          backgroundColor: 'var(--bg-secondary)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '999px',
+                          padding: '5px 9px'
+                        }}>
+                          <Tag size={11} />
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{
+                  marginTop: 'auto',
+                  paddingTop: '18px',
+                  borderTop: '1px dashed var(--border-color)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '14px',
+                  flexWrap: 'wrap'
+                }}>
+                  <strong className="serif-font" style={{ fontSize: '1.22rem', color: 'var(--color-primary)' }}>
+                    {menu.price.toLocaleString()}원
+                  </strong>
+                  <button
+                    onClick={() => setCustomerTab('estimator')}
+                    className="btn-secondary"
+                    style={{ padding: '9px 14px', fontSize: '0.82rem', borderRadius: '8px' }}
+                  >
+                    구성 선택
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+        ) : (
+          <div className="premium-card korean-border-box" style={{ padding: '48px 24px', backgroundColor: '#FFFFFF', textAlign: 'center' }}>
+            <p style={{ color: 'var(--color-text-sub)', lineHeight: 1.6 }}>
+              우선순위가 가장 높은 카테고리에 아직 노출 가능한 기본 상차림이 없습니다.
+            </p>
+            <button
+              onClick={() => setCustomerTab('estimator')}
+              className="btn-secondary"
+              style={{ marginTop: '18px', padding: '12px 24px' }}
+            >
+              상차림 주문기로 이동
+            </button>
+          </div>
+        )}
       </section>
 
       {/* Simple Information Guide Block */}
@@ -161,7 +243,7 @@ export const HeroSection: React.FC = () => {
           className="btn-primary"
           style={{ padding: '16px 28px', whiteSpace: 'nowrap' }}
         >
-          실시간 주문 및 결제
+          주문 및 결제
         </button>
       </section>
     </div>

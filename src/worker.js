@@ -210,9 +210,11 @@ const ensureSchema = async (env) => {
       id VARCHAR(50) PRIMARY KEY,
       name VARCHAR(100) NOT NULL,
       visible BOOLEAN DEFAULT TRUE NOT NULL,
+      priority INTEGER DEFAULT 0 NOT NULL,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
   `);
+  await query(env, 'ALTER TABLE hd_categories ADD COLUMN IF NOT EXISTS priority INTEGER DEFAULT 0 NOT NULL;');
 
   await query(env, `
     CREATE TABLE IF NOT EXISTS hd_base_menus (
@@ -223,10 +225,12 @@ const ensureSchema = async (env) => {
       price INTEGER NOT NULL,
       tags TEXT[] NOT NULL DEFAULT '{}',
       item_ids TEXT[] NOT NULL DEFAULT '{}',
+      image_url TEXT,
       visible BOOLEAN DEFAULT TRUE NOT NULL,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
   `);
+  await query(env, 'ALTER TABLE hd_base_menus ADD COLUMN IF NOT EXISTS image_url TEXT;');
 
   await query(env, `
     CREATE TABLE IF NOT EXISTS hd_catalog_items (
@@ -315,9 +319,9 @@ const ensureDefaultData = async (env) => {
   const categoryCount = await query(env, 'SELECT COUNT(*)::int AS count FROM hd_categories');
   if (Number(categoryCount.rows[0]?.count || 0) === 0) {
     await query(env, `
-      INSERT INTO hd_categories (id, name, visible) VALUES
-      ('cat-ritual', '차례 / 기제사상', true),
-      ('cat-gosa', '고사 / 시제상', true)
+      INSERT INTO hd_categories (id, name, visible, priority) VALUES
+      ('cat-ritual', '차례 / 기제사상', true, 1),
+      ('cat-gosa', '고사 / 시제상', true, 2)
       ON CONFLICT (id) DO NOTHING
     `);
   }
@@ -767,20 +771,20 @@ const handleApi = async (request, env) => {
 
   if (pathname === '/api/categories' && method === 'GET') {
     await ensureDefaultData(env);
-    const result = await query(env, 'SELECT * FROM hd_categories ORDER BY created_at ASC');
+    const result = await query(env, 'SELECT * FROM hd_categories ORDER BY priority ASC, created_at ASC, id ASC');
     return json(result.rows);
   }
 
   if (pathname === '/api/categories' && method === 'POST') {
-    const { id, name, visible } = await readJson(request);
-    const result = await query(env, 'INSERT INTO hd_categories (id, name, visible) VALUES ($1, $2, $3) RETURNING *', [id, name, visible !== undefined ? visible : true]);
+    const { id, name, visible, priority } = await readJson(request);
+    const result = await query(env, 'INSERT INTO hd_categories (id, name, visible, priority) VALUES ($1, $2, $3, $4) RETURNING *', [id, name, visible !== undefined ? visible : true, Number.isFinite(Number(priority)) ? Number(priority) : 0]);
     return json(result.rows[0], 201);
   }
 
   params = match(pathname, '/api/categories/:id');
   if (params && method === 'PUT') {
-    const { name, visible } = await readJson(request);
-    const result = await query(env, 'UPDATE hd_categories SET name = $1, visible = $2 WHERE id = $3 RETURNING *', [name, visible, params.id]);
+    const { name, visible, priority } = await readJson(request);
+    const result = await query(env, 'UPDATE hd_categories SET name = $1, visible = $2, priority = COALESCE($3, priority) WHERE id = $4 RETURNING *', [name, visible, Number.isFinite(Number(priority)) ? Number(priority) : null, params.id]);
     return json(result.rows[0]);
   }
 
@@ -791,20 +795,20 @@ const handleApi = async (request, env) => {
 
   if (pathname === '/api/base-menus' && method === 'GET') {
     await ensureDefaultData(env);
-    const result = await query(env, 'SELECT id, category_id as "categoryId", name, description, price, tags, item_ids as "itemIds", visible FROM hd_base_menus ORDER BY created_at ASC');
+    const result = await query(env, 'SELECT id, category_id as "categoryId", name, description, price, tags, item_ids as "itemIds", image_url as "imageUrl", visible FROM hd_base_menus ORDER BY created_at ASC');
     return json(result.rows);
   }
 
   if (pathname === '/api/base-menus' && method === 'POST') {
-    const { id, categoryId, name, description, price, tags, itemIds, visible } = await readJson(request);
-    const result = await query(env, 'INSERT INTO hd_base_menus (id, category_id, name, description, price, tags, item_ids, visible) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, category_id as "categoryId", name, description, price, tags, item_ids as "itemIds", visible', [id, categoryId, name, description, price, tags || [], itemIds || [], visible !== undefined ? visible : true]);
+    const { id, categoryId, name, description, price, tags, itemIds, imageUrl, visible } = await readJson(request);
+    const result = await query(env, 'INSERT INTO hd_base_menus (id, category_id, name, description, price, tags, item_ids, image_url, visible) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, category_id as "categoryId", name, description, price, tags, item_ids as "itemIds", image_url as "imageUrl", visible', [id, categoryId, name, description, price, tags || [], itemIds || [], imageUrl || null, visible !== undefined ? visible : true]);
     return json(result.rows[0], 201);
   }
 
   params = match(pathname, '/api/base-menus/:id');
   if (params && method === 'PUT') {
-    const { categoryId, name, description, price, tags, itemIds, visible } = await readJson(request);
-    const result = await query(env, 'UPDATE hd_base_menus SET category_id = $1, name = $2, description = $3, price = $4, tags = $5, item_ids = $6, visible = $7 WHERE id = $8 RETURNING id, category_id as "categoryId", name, description, price, tags, item_ids as "itemIds", visible', [categoryId, name, description, price, tags, itemIds, visible, params.id]);
+    const { categoryId, name, description, price, tags, itemIds, imageUrl, visible } = await readJson(request);
+    const result = await query(env, 'UPDATE hd_base_menus SET category_id = $1, name = $2, description = $3, price = $4, tags = $5, item_ids = $6, image_url = $7, visible = $8 WHERE id = $9 RETURNING id, category_id as "categoryId", name, description, price, tags, item_ids as "itemIds", image_url as "imageUrl", visible', [categoryId, name, description, price, tags, itemIds, imageUrl || null, visible, params.id]);
     return json(result.rows[0]);
   }
 

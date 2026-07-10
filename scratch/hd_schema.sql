@@ -12,6 +12,7 @@ CREATE TABLE hd_categories (
     id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     visible BOOLEAN DEFAULT TRUE NOT NULL,
+    priority INTEGER DEFAULT 0 NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -24,6 +25,7 @@ CREATE TABLE hd_base_menus (
     price INTEGER NOT NULL,
     tags TEXT[] NOT NULL DEFAULT '{}',
     item_ids TEXT[] NOT NULL DEFAULT '{}',
+    image_url TEXT,
     visible BOOLEAN DEFAULT TRUE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
